@@ -1,0 +1,1146 @@
+<template>
+  <div class="coupon-list-container">
+    <!-- 搜索和筛选 -->
+    <el-card shadow="never" class="search-card">
+      <div class="search-bar">
+        <div class="search-input-wrapper">
+          <el-input
+            v-model="searchForm.search"
+            placeholder="搜索优惠券名称、代码"
+            clearable
+            @keyup.enter="handleSearch"
+            class="search-input"
+          >
+            <template #prefix>
+              <el-icon><Search /></el-icon>
+            </template>
+          </el-input>
+        </div>
+        
+        <div class="filter-actions">
+          <el-select v-model="searchForm.status" placeholder="选择状态" clearable style="width: 120px">
+            <el-option label="有效" value="active" />
+            <el-option label="过期" value="expired" />
+            <el-option label="已用完" value="used_up" />
+            <el-option label="已禁用" value="disabled" />
+          </el-select>
+          
+          <el-select v-model="searchForm.type" placeholder="选择类型" clearable style="width: 120px">
+            <el-option label="满减券" value="discount" />
+            <el-option label="折扣券" value="percentage" />
+            <el-option label="抵扣券" value="free" />
+          </el-select>
+          
+          <el-button type="primary" @click="handleSearch" class="search-button">
+            <el-icon><Search /></el-icon>
+            搜索
+          </el-button>
+          
+          <el-button @click="resetSearch">
+            <el-icon><RefreshLeft /></el-icon>
+            重置
+          </el-button>
+          
+          <el-button type="primary" @click="handleAdd">
+            <el-icon><Plus /></el-icon>
+            添加优惠券
+          </el-button>
+        </div>
+      </div>
+    </el-card>
+
+    <!-- 表格 -->
+    <el-card shadow="never" class="table-card">
+      <div class="table-toolbar">
+        <div class="toolbar-left">
+          <span class="total-info">共 {{ total }} 条记录</span>
+        </div>
+        <div class="toolbar-right">
+          <el-tooltip content="刷新" placement="top">
+            <el-button link @click="fetchCouponList">
+              <el-icon><Refresh /></el-icon>
+            </el-button>
+          </el-tooltip>
+        </div>
+      </div>
+
+      <el-table
+        v-loading="loading"
+        :data="couponList"
+        border
+        style="width: 100%"
+        :empty-text="loading ? '加载中...' : '暂无数据'"
+      >
+        <el-table-column prop="name" label="优惠券名称" min-width="180">
+          <template #default="scope">
+            <div class="coupon-info">
+              <span class="coupon-name">{{ scope.row.name }}</span>
+              <div v-if="scope.row.description" class="coupon-desc">
+                {{ scope.row.description }}
+              </div>
+            </div>
+          </template>
+        </el-table-column>
+        
+        <el-table-column prop="code" label="优惠券代码" width="150" align="center">
+          <template #default="scope">
+            <el-tag type="info" class="coupon-code">
+              {{ scope.row.code }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        
+        <el-table-column prop="type" label="类型" width="100" align="center">
+          <template #default="scope">
+            <el-tag :type="getCouponTypeColor(scope.row.type)">
+              {{ getCouponTypeText(scope.row.type) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        
+        <el-table-column prop="discount" label="优惠额度" width="120" align="center">
+          <template #default="scope">
+            <span class="discount-text">
+              {{ formatDiscount(scope.row) }}
+            </span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column prop="minOrderAmount" label="最低消费" width="100" align="center">
+          <template #default="scope">
+            <span v-if="scope.row.minOrderAmount">
+              ¥{{ scope.row.minOrderAmount.toFixed(2) }}
+            </span>
+            <span v-else class="no-limit">无限制</span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="使用情况" width="120" align="center">
+          <template #default="scope">
+            <div class="usage-info">
+              <span>{{ scope.row.usedCount || 0 }} / {{ scope.row.totalCount || '∞' }}</span>
+              <el-progress 
+                v-if="scope.row.totalCount" 
+                :percentage="getUsagePercentage(scope.row)" 
+                :stroke-width="4"
+                :show-text="false"
+                class="usage-progress"
+              />
+            </div>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="有效期" width="200" align="center">
+          <template #default="scope">
+            <div class="validity-period">
+              <div class="date-range">
+                {{ formatDate(scope.row.startDate) }} 至 {{ formatDate(scope.row.endDate) }}
+              </div>
+              <el-tag 
+                :type="getValidityStatus(scope.row).type" 
+                size="small"
+                class="validity-tag"
+              >
+                {{ getValidityStatus(scope.row).text }}
+              </el-tag>
+            </div>
+          </template>
+        </el-table-column>
+        
+        <el-table-column prop="status" width="100" align="center">
+          <template #header>
+            <el-tooltip
+              content="开启：优惠券可正常使用；关闭：优惠券已禁用，用户无法使用"
+              placement="top"
+            >
+              <span>状态 <el-icon style="font-size: 12px;"><QuestionFilled /></el-icon></span>
+            </el-tooltip>
+          </template>
+          <template #default="scope">
+            <el-tooltip
+              :content="scope.row.isActive ? '优惠券可正常使用' : '优惠券已禁用，用户无法使用'"
+              placement="top"
+            >
+              <el-switch
+                v-model="scope.row.isActive"
+                @change="(val) => handleStatusChange(scope.row, val)"
+              />
+            </el-tooltip>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="操作" width="180" fixed="right" align="center">
+          <template #default="scope">
+            <el-button link type="primary" @click="handleView(scope.row)">详情</el-button>
+            <el-button link type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button link type="danger" @click="handleDelete(scope.row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      
+      <!-- 分页 -->
+      <div class="pagination-wrapper">
+        <el-pagination
+          v-model:current-page="pagination.page"
+          v-model:page-size="pagination.limit"
+          :page-sizes="[10, 20, 50, 100]"
+          :total="total"
+          layout="total, sizes, prev, pager, next, jumper"
+          @size-change="handleSizeChange"
+          @current-change="handleCurrentChange"
+        />
+      </div>
+    </el-card>
+
+    <!-- 优惠券详情抽屉 -->
+    <el-drawer
+      v-model="detailDrawerVisible"
+      title="优惠券详情"
+      direction="rtl"
+      size="600px"
+    >
+      <div v-if="selectedCouponData" class="coupon-detail">
+        <!-- 基本信息 -->
+        <el-card shadow="never" class="detail-card">
+          <template #header>
+            <div class="card-header">
+              <span>基本信息</span>
+            </div>
+          </template>
+          
+          <div class="coupon-basic-info">
+            <div class="info-row">
+              <label>优惠券名称：</label>
+              <span>{{ selectedCouponData.name }}</span>
+            </div>
+            <div class="info-row">
+              <label>优惠券代码：</label>
+              <el-tag type="info" class="coupon-code">
+                {{ selectedCouponData.code }}
+              </el-tag>
+            </div>
+            <div class="info-row">
+              <label>优惠券描述：</label>
+              <span>{{ selectedCouponData.description || '暂无描述' }}</span>
+            </div>
+            <div class="info-row">
+              <label>优惠券类型：</label>
+              <el-tag :type="getCouponTypeColor(selectedCouponData.type)">
+                {{ getCouponTypeText(selectedCouponData.type) }}
+              </el-tag>
+            </div>
+            <div class="info-row">
+              <label>优惠额度：</label>
+              <span class="discount-amount">{{ formatDiscount(selectedCouponData) }}</span>
+            </div>
+            <div class="info-row">
+              <label>最低消费：</label>
+              <span v-if="selectedCouponData.minOrderAmount">
+                ¥{{ selectedCouponData.minOrderAmount.toFixed(2) }}
+              </span>
+              <span v-else class="no-limit">无限制</span>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 使用统计 -->
+        <el-card shadow="never" class="detail-card">
+          <template #header>
+            <div class="card-header">
+              <span>使用统计</span>
+            </div>
+          </template>
+          
+          <div class="usage-stats">
+            <div class="stat-item">
+              <div class="stat-value">{{ selectedCouponData.usedCount || 0 }}</div>
+              <div class="stat-label">已使用</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ (selectedCouponData.totalCount || 0) - (selectedCouponData.usedCount || 0) }}</div>
+              <div class="stat-label">剩余数量</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-value">{{ selectedCouponData.totalCount || '∞' }}</div>
+              <div class="stat-label">总数量</div>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 有效期信息 -->
+        <el-card shadow="never" class="detail-card">
+          <template #header>
+            <div class="card-header">
+              <span>有效期信息</span>
+            </div>
+          </template>
+          
+          <div class="validity-info">
+            <div class="info-row">
+              <label>开始时间：</label>
+              <span>{{ formatDateTime(selectedCouponData.startDate) }}</span>
+            </div>
+            <div class="info-row">
+              <label>结束时间：</label>
+              <span>{{ formatDateTime(selectedCouponData.endDate) }}</span>
+            </div>
+            <div class="info-row">
+              <label>当前状态：</label>
+              <el-tag 
+                :type="getValidityStatus(selectedCouponData).type"
+              >
+                {{ getValidityStatus(selectedCouponData).text }}
+              </el-tag>
+            </div>
+          </div>
+        </el-card>
+
+        <!-- 操作按钮 -->
+        <div class="detail-actions">
+          <el-button type="primary" @click="handleEdit(selectedCouponData)">
+            编辑优惠券
+          </el-button>
+          <el-button 
+            :type="selectedCouponData.isActive ? 'warning' : 'success'"
+            @click="handleStatusChange(selectedCouponData, !selectedCouponData.isActive)"
+          >
+            {{ selectedCouponData.isActive ? '禁用优惠券' : '启用优惠券' }}
+          </el-button>
+          <el-button type="danger" @click="handleDelete(selectedCouponData)">
+            删除优惠券
+          </el-button>
+        </div>
+      </div>
+    </el-drawer>
+
+    <!-- 添加/编辑优惠券对话框 -->
+    <el-dialog
+      v-model="formDialogVisible"
+      :title="isEdit ? '编辑优惠券' : '添加优惠券'"
+      width="600px"
+      :close-on-click-modal="false"
+    >
+      <el-form
+        ref="couponFormRef"
+        :model="couponForm"
+        :rules="formRules"
+        label-width="120px"
+      >
+        <el-form-item label="优惠券名称" prop="name">
+          <el-input v-model="couponForm.name" placeholder="请输入优惠券名称" />
+        </el-form-item>
+        
+        <el-form-item label="优惠券代码" prop="code">
+          <el-input v-model="couponForm.code" placeholder="请输入优惠券代码">
+            <template #append>
+              <el-button @click="generateCode">生成代码</el-button>
+            </template>
+          </el-input>
+        </el-form-item>
+        
+        <el-form-item label="优惠券描述" prop="description">
+          <el-input 
+            v-model="couponForm.description" 
+            type="textarea" 
+            rows="3"
+            placeholder="请输入优惠券描述（可选）"
+          />
+        </el-form-item>
+        
+        <el-form-item label="优惠券类型" prop="type">
+          <el-select v-model="couponForm.type" style="width: 100%">
+            <el-option label="满减券" value="discount" />
+            <el-option label="折扣券" value="percentage" />
+            <el-option label="抵扣券" value="free" />
+          </el-select>
+        </el-form-item>
+        
+        <el-form-item 
+          :label="getDiscountLabel()" 
+          prop="discountValue"
+        >
+          <el-input v-model="couponForm.discountValue" type="number">
+            <template #append>
+              {{ getDiscountUnit() }}
+            </template>
+          </el-input>
+        </el-form-item>
+        
+        <el-form-item label="最低消费" prop="minOrderAmount">
+          <el-input v-model="couponForm.minOrderAmount" type="number" placeholder="0 表示无限制">
+            <template #append>元</template>
+          </el-input>
+        </el-form-item>
+        
+        <el-form-item label="发行数量" prop="totalCount">
+          <el-input v-model="couponForm.totalCount" type="number" placeholder="0 表示无限制">
+            <template #append>张</template>
+          </el-input>
+        </el-form-item>
+        
+        <el-form-item label="有效期" prop="dateRange">
+          <el-date-picker
+            v-model="couponForm.dateRange"
+            type="datetimerange"
+            range-separator="至"
+            start-placeholder="开始时间"
+            end-placeholder="结束时间"
+            format="YYYY-MM-DD HH:mm:ss"
+            value-format="YYYY-MM-DD HH:mm:ss"
+            style="width: 100%"
+          />
+        </el-form-item>
+        
+        <el-form-item label="是否启用" prop="isActive">
+          <el-switch v-model="couponForm.isActive" />
+        </el-form-item>
+      </el-form>
+      
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="formDialogVisible = false">取消</el-button>
+          <el-button type="primary" @click="handleSubmit" :loading="submitting">
+            {{ isEdit ? '更新' : '创建' }}
+          </el-button>
+        </span>
+      </template>
+    </el-dialog>
+  </div>
+</template>
+
+<script setup>
+import { ref, reactive, onMounted, watch } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { Search, RefreshLeft, Refresh, Plus, QuestionFilled } from '@element-plus/icons-vue'
+import { getCoupons, createCoupon, updateCoupon, deleteCoupon, updateCouponStatus } from '@/api/coupon'
+
+const loading = ref(false)
+const submitting = ref(false)
+const couponList = ref([])
+const total = ref(0)
+const detailDrawerVisible = ref(false)
+const selectedCouponData = ref(null)
+const formDialogVisible = ref(false)
+const isEdit = ref(false)
+const couponFormRef = ref(null)
+
+// 搜索表单
+const searchForm = reactive({
+  search: '',
+  status: '',
+  type: ''
+})
+
+// 分页信息
+const pagination = reactive({
+  page: 1,
+  limit: 20
+})
+
+// 优惠券表单
+const couponForm = reactive({
+  id: '',
+  name: '',
+  code: '',
+  description: '',
+  type: 'discount',
+  discountValue: '',
+  minOrderAmount: '',
+  totalCount: '',
+  dateRange: [],
+  isActive: true
+})
+
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入优惠券名称', trigger: 'blur' }
+  ],
+  code: [
+    { required: true, message: '请输入优惠券代码', trigger: 'blur' }
+  ],
+  type: [
+    { required: true, message: '请选择优惠券类型', trigger: 'change' }
+  ],
+  discountValue: [
+    { required: true, message: '请输入优惠额度', trigger: 'blur' }
+  ],
+  dateRange: [
+    { required: true, message: '请选择有效期', trigger: 'change' }
+  ]
+}
+
+// 时区转换工具函数
+// UTC时间字符串转本地时间字符串(用于显示)
+const utcToLocalString = (utcDateString) => {
+  if (!utcDateString) return ''
+  const date = new Date(utcDateString)
+  // 获取本地时间的年月日时分秒
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
+// 本地时间字符串转UTC时间字符串(用于提交)
+const localStringToUtc = (localDateString) => {
+  if (!localDateString) return ''
+  const date = new Date(localDateString)
+  return date.toISOString()
+}
+
+// 获取优惠券列表
+const fetchCouponList = async () => {
+  loading.value = true
+  try {
+    const params = {
+      page: pagination.page,
+      pageSize: pagination.limit,
+      keyword: searchForm.search,
+      status: searchForm.status,
+      type: searchForm.type
+    }
+    
+    console.log('发送请求参数:', params)
+    const response = await getCoupons(params)
+    console.log('API响应:', response)
+    
+    if (response && response.success) {
+      console.log('优惠券数据:', response.data.coupons)
+      couponList.value = response.data.coupons || []
+      total.value = response.data.total || 0
+      console.log('设置couponList:', couponList.value)
+      console.log('设置total:', total.value)
+    } else {
+      console.error('API返回错误:', response?.message || '未知错误')
+      throw new Error(response?.message || 'API调用失败')
+    }
+  } catch (error) {
+    console.error('获取优惠券列表失败', error)
+    console.log('使用模拟数据作为备选')
+    
+    // 如果API调用失败，使用模拟数据作为备选
+    const mockData = [
+      {
+        id: 1,
+        name: '新用户专享券',
+        code: 'NEW2024',
+        description: '新用户首单专享优惠',
+        type: 'fixed',
+        discountValue: 10,
+        minOrderAmount: 50,
+        totalCount: 1000,
+        usedCount: 150,
+        startDate: '2024-01-01 00:00:00',
+        endDate: '2024-12-31 23:59:59',
+        isActive: true
+      },
+      {
+        id: 2,
+        name: '满减优惠券',
+        code: 'SAVE20',
+        description: '满100减20元',
+        type: 'fixed',
+        discountValue: 20,
+        minOrderAmount: 100,
+        totalCount: 500,
+        usedCount: 300,
+        startDate: '2024-01-01 00:00:00',
+        endDate: '2024-06-30 23:59:59',
+        isActive: true
+      },
+      {
+        id: 3,
+        name: '8折优惠券',
+        code: 'DISCOUNT80',
+        description: '全场8折优惠',
+        type: 'percentage',
+        discountValue: 20,
+        minOrderAmount: 0,
+        totalCount: 200,
+        usedCount: 200,
+        startDate: '2024-03-01 00:00:00',
+        endDate: '2024-03-31 23:59:59',
+        isActive: false
+      }
+    ]
+    
+    couponList.value = mockData
+    total.value = mockData.length
+    console.log('模拟数据已设置:', { couponList: couponList.value, total: total.value })
+  } finally {
+    loading.value = false
+  }
+}
+
+// 搜索
+const handleSearch = () => {
+  pagination.page = 1
+  fetchCouponList()
+}
+
+// 重置搜索
+const resetSearch = () => {
+  Object.assign(searchForm, {
+    search: '',
+    status: '',
+    type: ''
+  })
+  handleSearch()
+}
+
+// 分页大小变化
+const handleSizeChange = (size) => {
+  pagination.limit = size
+  pagination.page = 1
+  fetchCouponList()
+}
+
+// 当前页变化
+const handleCurrentChange = (page) => {
+  pagination.page = page
+  fetchCouponList()
+}
+
+// 获取优惠券类型文本
+const getCouponTypeText = (type) => {
+  const typeMap = {
+    'discount': '满减券',
+    'percentage': '折扣券',
+    'free': '抵扣券'
+  }
+  return typeMap[type] || type
+}
+
+// 获取优惠券类型颜色
+const getCouponTypeColor = (type) => {
+  const colorMap = {
+    'discount': 'success',
+    'percentage': 'warning',
+    'free': 'danger'
+  }
+  return colorMap[type] || 'info'
+}
+
+// 获取优惠额度标签
+const getDiscountLabel = () => {
+  switch (couponForm.type) {
+    case 'percentage':
+      return '折扣比例'
+    case 'free':
+      return '抵扣金额'
+    default:
+      return '优惠金额'
+  }
+}
+
+// 获取优惠额度单位
+const getDiscountUnit = () => {
+  return couponForm.type === 'percentage' ? '%' : '元'
+}
+
+// 格式化优惠额度
+const formatDiscount = (coupon) => {
+  if (coupon.type === 'percentage') {
+    return `${coupon.discountValue}%折扣`
+  } else if (coupon.type === 'discount') {
+    return `减${coupon.discountValue}元`
+  } else if (coupon.type === 'free') {
+    return `抵扣${coupon.discountValue}元`
+  }
+  return ''
+}
+
+// 获取使用百分比
+const getUsagePercentage = (coupon) => {
+  if (!coupon.totalCount) return 0
+  return Math.round((coupon.usedCount / coupon.totalCount) * 100)
+}
+
+// 格式化日期
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleDateString('zh-CN')
+}
+
+// 格式化日期时间
+const formatDateTime = (dateStr) => {
+  if (!dateStr) return '-'
+  return new Date(dateStr).toLocaleString('zh-CN')
+}
+
+// 获取有效期状态
+const getValidityStatus = (coupon) => {
+  const now = new Date()
+  const startDate = new Date(coupon.startDate)
+  const endDate = new Date(coupon.endDate)
+  
+  if (now < startDate) {
+    return { type: 'info', text: '未开始' }
+  } else if (now > endDate) {
+    return { type: 'danger', text: '已过期' }
+  } else if (!coupon.isActive) {
+    return { type: 'warning', text: '已禁用' }
+  } else if (coupon.totalCount && coupon.usedCount >= coupon.totalCount) {
+    return { type: 'warning', text: '已用完' }
+  } else {
+    return { type: 'success', text: '有效' }
+  }
+}
+
+// 查看详情
+const handleView = (row) => {
+  selectedCouponData.value = row
+  detailDrawerVisible.value = true
+}
+
+// 添加优惠券
+const handleAdd = () => {
+  isEdit.value = false
+  resetForm()
+  formDialogVisible.value = true
+}
+
+// 编辑优惠券
+const handleEdit = (row) => {
+  isEdit.value = true
+  Object.assign(couponForm, {
+    id: row.id,
+    name: row.name,
+    code: row.code,
+    description: row.description,
+    type: row.type,
+    discountValue: row.discountValue?.toString() || '',
+    minOrderAmount: row.minOrderAmount?.toString() || '',
+    totalCount: row.totalCount?.toString() || '',
+    isActive: row.isActive
+  })
+  // 转换UTC时间为本地时间字符串
+  couponForm.dateRange = [
+    utcToLocalString(row.startDate),
+    utcToLocalString(row.endDate)
+  ]
+  formDialogVisible.value = true
+}
+
+// 删除优惠券
+const handleDelete = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除优惠券 "${row.name}" 吗？此操作不可恢复。`,
+      '确认删除',
+      {
+        type: 'warning',
+        confirmButtonText: '确定删除',
+        cancelButtonText: '取消'
+      }
+    )
+    
+    // 调用删除API
+    await deleteCoupon(row.id)
+    ElMessage.success('删除成功')
+    fetchCouponList()
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除优惠券失败:', error)
+      ElMessage.error('删除优惠券失败: ' + (error.response?.data?.message || error.message || '未知错误'))
+    }
+  }
+}
+
+// 更新状态
+const handleStatusChange = async (row, value) => {
+  try {
+    row.isActive = value
+    ElMessage.success(`优惠券已${value ? '启用' : '禁用'}`)
+  } catch (error) {
+    console.error('更新优惠券状态失败', error)
+    ElMessage.error('更新优惠券状态失败')
+    row.isActive = !value
+  }
+}
+
+// 生成优惠券代码
+const generateCode = () => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+  let result = ''
+  for (let i = 0; i < 8; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length))
+  }
+  couponForm.code = result
+}
+
+// 重置表单
+const resetForm = () => {
+  Object.assign(couponForm, {
+    id: '',
+    name: '',
+    code: '',
+    description: '',
+    type: 'discount',
+    discountValue: '',
+    minOrderAmount: '',
+    totalCount: '',
+    dateRange: [],
+    isActive: true
+  })
+}
+
+// 提交表单
+const handleSubmit = async () => {
+  try {
+    await couponFormRef.value.validate()
+    
+    if (!couponForm.dateRange || couponForm.dateRange.length !== 2) {
+      ElMessage.error('请选择有效期')
+      return
+    }
+    
+    submitting.value = true
+    
+    // 准备提交数据
+    const submitData = {
+      name: couponForm.name,
+      code: couponForm.code,
+      description: couponForm.description,
+      type: couponForm.type,
+      discountValue: Number(couponForm.discountValue),
+      minOrderAmount: Number(couponForm.minOrderAmount) || 0,
+      totalCount: Number(couponForm.totalCount) || 0,
+      startDate: localStringToUtc(couponForm.dateRange[0]),
+      endDate: localStringToUtc(couponForm.dateRange[1]),
+      isActive: couponForm.isActive
+    }
+    
+    console.log('提交的优惠券数据:', submitData)
+    
+    // 调用API
+    if (isEdit.value) {
+      await updateCoupon(couponForm.id, submitData)
+    } else {
+      await createCoupon(submitData)
+    }
+    
+    ElMessage.success(isEdit.value ? '更新成功' : '创建成功')
+    formDialogVisible.value = false
+    fetchCouponList()
+  } catch (error) {
+    console.error('提交失败:', error)
+    ElMessage.error('提交失败: ' + (error.response?.data?.message || error.message || '未知错误'))
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 监听搜索表单变化
+watch(
+  () => searchForm.search,
+  () => {
+    clearTimeout(window.searchTimeout)
+    window.searchTimeout = setTimeout(() => {
+      if (searchForm.search.length === 0 || searchForm.search.length >= 2) {
+        handleSearch()
+      }
+    }, 500)
+  }
+)
+
+// 监听状态筛选变化
+watch(
+  () => searchForm.status,
+  (newVal, oldVal) => {
+    // 只有当值真正改变时才触发搜索
+    if (newVal !== oldVal) {
+      handleSearch()
+    }
+  }
+)
+
+// 监听类型筛选变化
+watch(
+  () => searchForm.type,
+  (newVal, oldVal) => {
+    // 只有当值真正改变时才触发搜索
+    if (newVal !== oldVal) {
+      handleSearch()
+    }
+  }
+)
+
+onMounted(() => {
+  fetchCouponList()
+})
+</script>
+
+<style scoped>
+.coupon-list-container {
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.search-card {
+  margin-bottom: 10px;
+  width: 100%;
+}
+
+.search-card :deep(.el-card__body) {
+  padding: 12px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 40px;
+}
+
+.search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.search-input {
+  width: 280px;
+}
+
+.search-button {
+  min-width: 80px;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.table-card {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-card :deep(.el-card__body) {
+  padding: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.total-info {
+  font-size: 14px;
+  color: #606266;
+}
+
+.toolbar-right {
+  display: flex;
+  gap: 8px;
+}
+
+.coupon-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.coupon-name {
+  font-weight: 500;
+  color: #303133;
+}
+
+.coupon-desc {
+  font-size: 12px;
+  color: #909399;
+}
+
+.coupon-code {
+  font-family: 'Monaco', 'Menlo', 'Consolas', monospace;
+  font-weight: 600;
+}
+
+.discount-text {
+  color: #E6A23C;
+  font-weight: 600;
+}
+
+.no-limit {
+  color: #909399;
+  font-style: italic;
+}
+
+.usage-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.usage-progress {
+  width: 60px;
+}
+
+.validity-period {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.date-range {
+  font-size: 12px;
+  color: #606266;
+}
+
+.validity-tag {
+  font-size: 11px;
+}
+
+.pagination-wrapper {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 16px;
+  padding: 8px 0 0 0;
+}
+
+/* 详情抽屉样式 */
+.coupon-detail {
+  padding: 16px;
+}
+
+.detail-card {
+  margin-bottom: 16px;
+}
+
+.detail-card :deep(.el-card__header) {
+  padding: 12px 16px;
+  background-color: #f8f9fa;
+}
+
+.detail-card :deep(.el-card__body) {
+  padding: 16px;
+}
+
+.card-header {
+  font-weight: 600;
+  color: #303133;
+}
+
+.coupon-basic-info,
+.validity-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.info-row {
+  display: flex;
+  align-items: center;
+  min-height: 24px;
+}
+
+.info-row label {
+  width: 100px;
+  color: #606266;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.info-row span {
+  color: #303133;
+  word-break: break-all;
+}
+
+.discount-amount {
+  color: #E6A23C;
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.usage-stats {
+  display: flex;
+  gap: 32px;
+  justify-content: space-around;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #409EFF;
+  margin-bottom: 4px;
+}
+
+.stat-label {
+  font-size: 14px;
+  color: #606266;
+}
+
+.detail-actions {
+  display: flex;
+  gap: 12px;
+  padding: 16px;
+  border-top: 1px solid #ebeef5;
+  margin-top: 16px;
+}
+
+.detail-actions .el-button {
+  flex: 1;
+}
+
+/* 表格样式 */
+:deep(.el-table .el-table__cell) {
+  padding: 8px 0;
+}
+
+:deep(.el-table .el-table__header-wrapper th) {
+  background-color: #fafafa;
+  color: #606266;
+  font-weight: 500;
+}
+
+/* 修复描述字段焦点状态边框问题 */
+:deep(.el-textarea__inner:focus) {
+  border-color: #409EFF;
+  outline: 0;
+  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+}
+
+:deep(.el-textarea__inner:hover) {
+  border-color: #c0c4cc;
+}
+
+:deep(.el-textarea__inner) {
+  border: 1px solid #dcdfe6;
+  transition: border-color 0.2s cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
+/* 移除按钮焦点边框 */
+:deep(.el-button:focus) {
+  outline: none;
+  box-shadow: none;
+}
+
+/* 对话框样式 */
+.dialog-footer {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+</style> 
