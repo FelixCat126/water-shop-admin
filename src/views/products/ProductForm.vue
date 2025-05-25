@@ -37,8 +37,8 @@
                 <el-select v-model="form.tag" placeholder="请选择商品标签" style="width: 100%" clearable>
                   <el-option label="热销" value="热销" />
                   <el-option label="新品" value="新品" />
-                  <el-option label="推荐" value="推荐" />
-                  <el-option label="特价" value="特价" />
+                  <el-option label="优惠" value="优惠" />
+                  <el-option label="限量" value="限量" />
                 </el-select>
               </el-form-item>
               
@@ -140,7 +140,7 @@
                   :show-file-list="false"
                   :on-success="handleMainImageSuccess"
                   :before-upload="beforeImageUpload"
-                  :headers="{ Authorization: `Bearer ${localStorage.getItem('token')}` }"
+                  :headers="authHeaders"
                 >
                   <img v-if="form.image" :src="form.image" class="avatar" />
                   <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
@@ -156,7 +156,7 @@
                   :on-success="handleGallerySuccess"
                   :on-remove="handleGalleryRemove"
                   :before-upload="beforeImageUpload"
-                  :headers="{ Authorization: `Bearer ${localStorage.getItem('token')}` }"
+                  :headers="authHeaders"
                   :file-list="form.imageGallery.map(img => ({
                     name: img.name || '图片',
                     url: img.url || img
@@ -204,6 +204,8 @@ const route = useRoute()
 const router = useRouter()
 const formRef = ref(null)
 const loading = ref(false)
+
+
 
 // 判断是编辑还是新增
 const isEdit = computed(() => {
@@ -415,11 +417,15 @@ onMounted(() => {
   margin-bottom: 16px;
   padding-bottom: 8px;
   border-bottom: 1px solid #dcdfe6;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .form-actions {
   display: flex;
   justify-content: center;
+  gap: 12px;
   margin-top: 20px;
   padding-top: 16px;
   border-top: 1px solid #ebeef5;
@@ -470,15 +476,93 @@ onMounted(() => {
   display: flex;
   margin-bottom: 8px;
   align-items: center;
+  gap: 8px;
 }
 
 .param-key {
   width: 40%;
-  margin-right: 8px;
 }
 
 .param-value {
   flex: 1;
-  margin-right: 8px;
+}
+
+/* 新增的样式 */
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.form-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
+
+.product-preview {
+  border: 1px solid #dcdfe6;
+  border-radius: 6px;
+  padding: 12px;
+  background-color: #fff;
+}
+
+.preview-image {
+  width: 100%;
+  height: 120px;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  background-color: #f5f7fa;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.preview-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.no-image {
+  color: #909399;
+  font-size: 14px;
+}
+
+.preview-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 16px;
+  color: #303133;
+  font-weight: 600;
+}
+
+.preview-info .price {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  color: #e6a23c;
+  font-weight: bold;
+}
+
+.preview-info .brief {
+  margin: 0 0 12px 0;
+  font-size: 12px;
+  color: #606266;
+  line-height: 1.4;
+}
+
+.preview-info .tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.gallery-uploader .el-upload-list__item {
+  width: 80px;
+  height: 80px;
+}
+
+.gallery-uploader .el-upload--picture-card {
+  width: 80px;
+  height: 80px;
 }
 </style> 

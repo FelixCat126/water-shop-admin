@@ -45,6 +45,10 @@
             <el-icon><Plus /></el-icon>
             添加商品
           </el-button>
+          <el-button type="success" @click="handleBatchImport">
+            <el-icon><Upload /></el-icon>
+            批量导入
+          </el-button>
           <el-button 
             type="danger" 
             :disabled="selectedProducts.length === 0"
@@ -598,6 +602,16 @@
         </div>
       </div>
     </el-drawer>
+
+    <!-- 批量导入抽屉 -->
+    <el-drawer
+      v-model="batchImportVisible"
+      title="批量导入商品"
+      direction="rtl"
+      size="600px"
+    >
+      <ProductBatchImport @importSuccess="handleBatchImportSuccess" @importError="handleBatchImportError" />
+    </el-drawer>
   </div>
 </template>
 
@@ -606,9 +620,10 @@ import { ref, reactive, onMounted, watch, nextTick, computed, onUnmounted } from
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { 
-  Search, Filter, RefreshLeft, Setting, Refresh, Download, Delete, Plus, Picture, QuestionFilled
+  Search, Filter, RefreshLeft, Setting, Refresh, Download, Delete, Plus, Picture, QuestionFilled, Upload
 } from '@element-plus/icons-vue'
 import { getProducts, deleteProduct, updateProduct } from '@/api/product'
+import ProductBatchImport from './ProductBatchImport.vue'
 
 const router = useRouter()
 const loading = ref(false)
@@ -621,6 +636,7 @@ const advancedFilterVisible = ref(false)
 const detailDrawerVisible = ref(false)
 const selectedProductId = ref('')
 const selectedProductData = ref(null)
+const batchImportVisible = ref(false)
 
 // 计算是否有活跃的筛选条件
 const hasActiveFilters = computed(() => {
@@ -780,7 +796,6 @@ const handleCurrentChange = (page) => {
 
 // 获取类别名称
 const getCategoryName = (category) => {
-  // 支持中文分类名称，如果是英文则转换为中文
   const categoryMap = {
     'pure': '纯净水',
     'mineral': '矿泉水',
@@ -810,6 +825,11 @@ const getCategoryType = (category) => {
 // 添加商品
 const handleAdd = () => {
   router.push('/products/add')
+}
+
+// 批量导入商品
+const handleBatchImport = () => {
+  batchImportVisible.value = true
 }
 
 // 编辑商品
@@ -1051,6 +1071,17 @@ onUnmounted(() => {
     delete window.searchTimeout
   }
 })
+
+// 批量导入成功事件
+const handleBatchImportSuccess = () => {
+  fetchProductList()
+  ElMessage.success('批量导入完成，商品列表已刷新')
+}
+
+// 批量导入错误事件
+const handleBatchImportError = (error) => {
+  ElMessage.error(`批量导入失败: ${error.message || '未知错误'}`)
+}
 </script>
 
 <style scoped>

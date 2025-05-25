@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# 临时文件和文档
+*.md
+!README.md
+*.tmp
+*.temp
+
+# 批量导入功能（如果不需要）
+src/views/products/ProductBatchImport.vue
