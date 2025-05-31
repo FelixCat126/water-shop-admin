@@ -325,7 +325,7 @@ const initPieChart = () => {
       {
         name: '销售占比',
         type: 'pie',
-        radius: ['35%', '70%'],
+        radius: ['40%', '65%'],
         center: ['30%', '50%'],
         avoidLabelOverlap: true,
         itemStyle: {
@@ -655,7 +655,15 @@ onBeforeUnmount(() => {
   background-color: #f0f2f5;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* 隐藏滚动条但保持滚动功能 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+.dashboard-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari and Opera */
 }
 
 /* 统计区域样式 */
@@ -687,16 +695,10 @@ onBeforeUnmount(() => {
   height: 100px;
   border-radius: 12px;
   overflow: hidden;
-  transition: all 0.3s ease;
   border: 1px solid #e4e7ed;
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.08);
   background: white;
-}
-
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 25px 0 rgba(0, 0, 0, 0.15);
-  border-color: #409EFF;
+  /* 移除鼠标焦点特效 */
 }
 
 .stat-card .el-card__body {
@@ -819,7 +821,7 @@ onBeforeUnmount(() => {
 .chart-placeholder {
   width: 100%;
   height: 100%;
-  min-height: 280px; /* 确保图表有最小高度 */
+  min-height: 320px; /* 增加高度确保内容完整显示 */ /* 确保图表有最小高度 */
   display: flex;
   justify-content: center;
   align-items: center;
@@ -830,7 +832,7 @@ onBeforeUnmount(() => {
 
 .ranking-list {
   padding: 4px 0 8px 0;
-  height: 280px; /* 设置固定高度 */
+  height: 320px; /* 增加高度确保内容完整显示 */ /* 设置固定高度 */
   overflow-y: auto;
 }
 
@@ -919,7 +921,7 @@ onBeforeUnmount(() => {
 
 .pie-container {
   flex: 1;
-  min-height: 280px; /* 确保图表有最小高度 */
+  min-height: 320px; /* 增加高度确保内容完整显示 */ /* 确保图表有最小高度 */
 }
 
 .order-card {
@@ -964,18 +966,20 @@ onBeforeUnmount(() => {
 /* 主要内容区域 */
 .main-content {
   flex: 1;
-  padding: 12px 0 0 0;
+  padding: 12px 0 24px 0; /* 增加底部内边距确保内容不被切断 */
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  min-height: 0; /* 允许内容收缩 */
 }
 
 .chart-row {
   margin-bottom: 20px;
+  flex-shrink: 0; /* 防止图表行被压缩 */
 }
 
 .data-row {
   margin-bottom: 0;
+  flex-shrink: 0; /* 防止数据行被压缩 */
 }
 
 /* 表格文本溢出样式 */
@@ -987,5 +991,385 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   display: block;
   max-width: 100%;
+}
+
+/* 响应式设计 - 小屏幕适配 */
+@media (max-height: 800px) {
+  .dashboard-container {
+    height: auto;
+    min-height: calc(100vh - 60px);
+    padding-bottom: 20px;
+  }
+  
+  .stats-section {
+    padding: 16px 24px 8px 24px;
+  }
+  
+  .stat-card {
+    height: 100px; /* 增加高度避免内容被遮挡 */
+  }
+  
+  .icon-wrapper {
+    width: 48px;
+    height: 48px;
+    margin-right: 16px;
+  }
+  
+  .icon-wrapper .el-icon {
+    font-size: 24px;
+  }
+  
+  .stat-number {
+    font-size: 22px;
+  }
+  
+  .sales-chart-card, .ranking-card, .pie-card, .order-card {
+    height: 350px; /* 增加高度确保内容完整显示 */
+  }
+  
+  .chart-container {
+    min-height: 260px;
+    height: 260px;
+  }
+  
+  .chart-placeholder {
+    min-height: 240px;
+  }
+  
+  .ranking-list {
+    height: 240px;
+  }
+  
+  .pie-container {
+    min-height: 240px;
+  }
+}
+
+@media (max-height: 700px) {
+  .stats-section {
+    padding: 12px 24px 6px 24px;
+  }
+  
+  .stat-card {
+    height: 90px; /* 增加高度避免内容被遮挡 */
+  }
+  
+  .icon-wrapper {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+  }
+  
+  .icon-wrapper .el-icon {
+    font-size: 20px;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+  }
+  
+  .sales-chart-card, .ranking-card, .pie-card, .order-card {
+    height: 320px; /* 增加高度确保内容完整显示 */
+  }
+  
+  .chart-container {
+    min-height: 220px;
+    height: 220px;
+  }
+  
+  .chart-placeholder {
+    min-height: 200px;
+  }
+  
+  .ranking-list {
+    height: 200px;
+  }
+  
+  .pie-container {
+    min-height: 200px;
+  }
+  
+  .main-content {
+    padding: 8px 0 16px 0;
+  }
+  
+  .chart-row {
+    margin-bottom: 16px;
+  }
+}
+
+/* 响应式设计 - 小屏幕适配 */
+@media (max-height: 800px) {
+  .dashboard-container {
+    height: auto;
+    min-height: calc(100vh - 60px);
+    padding-bottom: 20px;
+  }
+  
+  .stats-section {
+    padding: 16px 24px 8px 24px;
+  }
+  
+  .stat-card {
+    height: 100px; /* 增加高度避免内容被遮挡 */
+  }
+  
+  .icon-wrapper {
+    width: 48px;
+    height: 48px;
+    margin-right: 16px;
+  }
+  
+  .icon-wrapper .el-icon {
+    font-size: 24px;
+  }
+  
+  .stat-number {
+    font-size: 22px;
+  }
+  
+  .sales-chart-card, .ranking-card, .pie-card, .order-card {
+    height: 350px; /* 增加高度确保内容完整显示 */
+  }
+  
+  .chart-container {
+    min-height: 260px;
+    height: 260px;
+  }
+  
+  .chart-placeholder {
+    min-height: 240px;
+  }
+  
+  .ranking-list {
+    height: 240px;
+  }
+  
+  .pie-container {
+    min-height: 240px;
+  }
+}
+
+@media (max-height: 700px) {
+  .stats-section {
+    padding: 12px 24px 6px 24px;
+  }
+  
+  .stat-card {
+    height: 90px; /* 增加高度避免内容被遮挡 */
+  }
+  
+  .icon-wrapper {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+  }
+  
+  .icon-wrapper .el-icon {
+    font-size: 20px;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+  }
+  
+  .sales-chart-card, .ranking-card, .pie-card, .order-card {
+    height: 320px; /* 增加高度确保内容完整显示 */
+  }
+  
+  .chart-container {
+    min-height: 220px;
+    height: 220px;
+  }
+  
+  .chart-placeholder {
+    min-height: 200px;
+  }
+  
+  .ranking-list {
+    height: 200px;
+  }
+  
+  .pie-container {
+    min-height: 200px;
+  }
+  
+  .main-content {
+    padding: 8px 0 16px 0;
+  }
+  
+  .chart-row {
+    margin-bottom: 16px;
+  }
+}
+
+/* 响应式设计 - 小屏幕适配 */
+@media (max-height: 800px) {
+  .dashboard-container {
+    height: auto;
+    min-height: calc(100vh - 60px);
+    padding-bottom: 20px;
+  }
+  
+  .stats-section {
+    padding: 16px 24px 8px 24px;
+  }
+  
+  .stat-card {
+    height: 100px; /* 增加高度避免内容被遮挡 */
+  }
+  
+  .icon-wrapper {
+    width: 48px;
+    height: 48px;
+    margin-right: 16px;
+  }
+  
+  .icon-wrapper .el-icon {
+    font-size: 24px;
+  }
+  
+  .stat-number {
+    font-size: 22px;
+  }
+  
+  .sales-chart-card, .ranking-card, .pie-card, .order-card {
+    height: 350px; /* 增加高度确保内容完整显示 */
+  }
+  
+  .chart-container {
+    min-height: 260px;
+    height: 260px;
+  }
+  
+  .chart-placeholder {
+    min-height: 240px;
+  }
+  
+  .ranking-list {
+    height: 240px;
+  }
+  
+  .pie-container {
+    min-height: 240px;
+  }
+}
+
+@media (max-height: 700px) {
+  .stats-section {
+    padding: 12px 24px 6px 24px;
+  }
+  
+  .stat-card {
+    height: 90px; /* 增加高度避免内容被遮挡 */
+  }
+  
+  .icon-wrapper {
+    width: 40px;
+    height: 40px;
+    margin-right: 12px;
+  }
+  
+  .icon-wrapper .el-icon {
+    font-size: 20px;
+  }
+  
+  .stat-number {
+    font-size: 20px;
+  }
+  
+  .sales-chart-card, .ranking-card, .pie-card, .order-card {
+    height: 320px; /* 增加高度确保内容完整显示 */
+  }
+  
+  .chart-container {
+    min-height: 220px;
+    height: 220px;
+  }
+  
+  .chart-placeholder {
+    min-height: 200px;
+  }
+  
+  .ranking-list {
+    height: 200px;
+  }
+  
+  .pie-container {
+    min-height: 200px;
+  }
+  
+  .main-content {
+    padding: 8px 0 16px 0;
+  }
+  
+  .chart-row {
+    margin-bottom: 16px;
+  }
+}
+
+/* 超小屏幕适配 */
+@media (max-height: 600px) {
+  .dashboard-container {
+    padding-bottom: 30px;
+  }
+  
+  .stats-container {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  
+  .stat-item {
+    flex: 1 1 calc(50% - 4px);
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+  
+  .stat-card {
+    height: 60px;
+  }
+  
+  .icon-wrapper {
+    width: 36px;
+    height: 36px;
+    margin-right: 10px;
+  }
+  
+  .icon-wrapper .el-icon {
+    font-size: 18px;
+  }
+  
+  .stat-number {
+    font-size: 18px;
+  }
+  
+  .stat-title {
+    font-size: 12px;
+  }
+  
+  .stat-desc {
+    font-size: 11px;
+  }
+  
+  .sales-chart-card, .ranking-card, .pie-card, .order-card {
+    height: 250px;
+  }
+  
+  .chart-container {
+    min-height: 190px;
+    height: 190px;
+  }
+  
+  .chart-placeholder {
+    min-height: 170px;
+  }
+  
+  .ranking-list {
+    height: 170px;
+  }
+  
+  .pie-container {
+    min-height: 170px;
+  }
 }
 </style> 

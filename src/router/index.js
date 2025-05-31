@@ -41,6 +41,18 @@ const routes = [
         meta: { title: '优惠券管理' }
       },
       {
+        path: 'banners',
+        name: 'Banners',
+        component: () => import('../views/banners/BannerList.vue'),
+        meta: { title: '轮播图管理' }
+      },
+      {
+        path: 'contents',
+        name: 'Contents',
+        component: () => import('../views/contents/ContentList.vue'),
+        meta: { title: '内容管理' }
+      },
+      {
         path: 'products/edit/:id',
         name: 'EditProduct',
         component: () => import('../views/products/ProductForm.vue'),
@@ -59,10 +71,22 @@ const routes = [
         meta: { title: '用户管理' }
       },
       {
+        path: 'contents',
+        name: 'Contents',
+        component: () => import('../views/contents/ContentList.vue'),
+        meta: { title: '内容管理' }
+      },
+      {
         path: 'settings',
         name: 'Settings',
         component: () => import('../views/settings/Settings.vue'),
         meta: { title: '系统设置' }
+      },
+      {
+        path: 'admins',
+        name: 'Admins',
+        component: () => import('../views/admins/AdminList.vue'),
+        meta: { title: '管理员账号' }
       }
     ]
   },
@@ -88,9 +112,9 @@ router.beforeEach((to, from, next) => {
   } else {
     // 设置页面标题
     if (to.meta.title) {
-      document.title = `水站管理系统 - ${to.meta.title}`
-    } else {
-      document.title = '水站管理系统'
+          document.title = `SPRINKLE - ${to.meta.title}`
+  } else {
+    document.title = 'SPRINKLE'
     }
     next()
   }
