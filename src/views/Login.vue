@@ -18,7 +18,7 @@
           </div>
         </div>
         <h1 class="brand-title">SPRINKLE</h1>
-        <p class="brand-subtitle">饮用水管理后台</p>
+                    <p class="brand-subtitle">管理后台</p>
         <div class="header-divider"></div>
       </div>
       
@@ -87,7 +87,7 @@
         </div>
         
         <div class="copyright">
-          <p>© {{ currentYear }} SPRINKLE 饮用水管理系统</p>
+          <p>© {{ currentYear }} SPRINKLE</p>
           <p>专业 · 安全 · 可靠</p>
         </div>
       </div>
@@ -142,7 +142,7 @@ const handleLogin = () => {
 
 // 页面标题
 onMounted(() => {
-  document.title = 'SPRINKLE 饮用水管理后台'
+  document.title = 'SPRINKLE 后台管理'
 })
 </script>
 

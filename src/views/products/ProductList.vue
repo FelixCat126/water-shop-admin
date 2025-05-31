@@ -120,7 +120,6 @@
             <el-select v-model="searchForm.category" placeholder="选择分类" clearable style="width: 100%">
               <el-option label="纯净水" value="纯净水" />
               <el-option label="矿泉水" value="矿泉水" />
-              <el-option label="家庭装" value="家庭装" />
               <el-option label="气泡水" value="气泡水" />
             </el-select>
           </el-form-item>
@@ -306,7 +305,7 @@
         <el-table-column
           prop="stock"
           label="库存"
-          width="100"
+          width="120"
           align="center"
           sortable="custom"
           v-if="visibleColumns.includes('stock')"
@@ -612,6 +611,347 @@
     >
       <ProductBatchImport @importSuccess="handleBatchImportSuccess" @importError="handleBatchImportError" />
     </el-drawer>
+
+    <!-- 添加/编辑商品对话框 -->
+    <el-dialog
+      v-model="formDialogVisible"
+      :title="isEdit ? '编辑商品' : '添加商品'"
+      width="1200px"
+      :close-on-click-modal="false"
+      destroy-on-close
+      class="product-dialog"
+    >
+      <div class="product-form-container">
+        <el-form
+          ref="productFormRef"
+          :model="productForm"
+          :rules="formRules"
+          label-width="100px"
+          class="product-form"
+        >
+          <div class="form-sections">
+            <!-- 左侧：基本信息 -->
+            <div class="form-section-left">
+              <!-- 基本信息区域 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <el-icon class="section-icon"><Goods /></el-icon>
+                  <span class="section-title">基本信息</span>
+                </div>
+                <div class="section-content">
+                  <el-row :gutter="16">
+                    <el-col :span="12">
+                      <el-form-item label="商品名称" prop="name">
+                        <el-input 
+                          v-model="productForm.name" 
+                          placeholder="请输入商品名称"
+                          clearable
+                        />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-form-item label="商品分类" prop="category">
+                        <el-select 
+                          v-model="productForm.category" 
+                          placeholder="请选择分类" 
+                          style="width: 100%"
+                          clearable
+                        >
+                          <el-option label="纯净水" value="纯净水" />
+                          <el-option label="矿泉水" value="矿泉水" />
+                          <el-option label="气泡水" value="气泡水" />
+                        </el-select>
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+
+                  <el-row :gutter="16">
+                    <el-col :span="12">
+                      <el-form-item label="商品价格" prop="price">
+                        <el-input-number 
+                          v-model="productForm.price" 
+                          :min="0" 
+                          :precision="2"
+                          :step="0.1"
+                          style="width: 100%"
+                          placeholder="0.00"
+                          controls-position="right"
+                        />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-form-item label="库存数量" prop="stock">
+                        <el-input-number 
+                          v-model="productForm.stock" 
+                          :min="0" 
+                          style="width: 100%"
+                          placeholder="0"
+                          controls-position="right"
+                        />
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+
+                  <el-row :gutter="16">
+                    <el-col :span="12">
+                      <el-form-item label="商品单位" prop="unit">
+                        <el-input 
+                          v-model="productForm.unit" 
+                          placeholder="如：瓶、箱"
+                          clearable
+                        />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <!-- 预留空间，可以添加其他字段 -->
+                    </el-col>
+                  </el-row>
+
+                  <el-form-item label="商品标签">
+                    <el-select 
+                      v-model="productForm.tags" 
+                      multiple
+                      filterable
+                      allow-create
+                      default-first-option
+                      placeholder="选择或输入新标签"
+                      style="width: 100%"
+                      collapse-tags
+                      collapse-tags-tooltip
+                      :max-collapse-tags="3"
+                    >
+                      <el-option
+                        v-for="tag in predefinedTags"
+                        :key="tag"
+                        :label="tag"
+                        :value="tag"
+                      />
+                    </el-select>
+                    <div class="tag-tip">可选择预设标签或输入新标签，支持多选</div>
+                  </el-form-item>
+                </div>
+              </div>
+
+              <!-- 商品描述区域 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <el-icon class="section-icon"><目的Document /></el-icon>
+                  <span class="section-title">商品描述</span>
+                </div>
+                <div class="section-content">
+                  <el-form-item label="商品简介">
+                    <el-input 
+                      v-model="productForm.brief" 
+                      type="textarea" 
+                      :rows="2"
+                      placeholder="请输入商品简介"
+                      show-word-limit
+                      maxlength="100"
+                    />
+                  </el-form-item>
+
+                  <el-form-item label="商品描述">
+                    <el-input 
+                      v-model="productForm.description" 
+                      type="textarea" 
+                      :rows="4"
+                      placeholder="请输入商品详细描述"
+                      show-word-limit
+                      maxlength="500"
+                    />
+                  </el-form-item>
+                </div>
+              </div>
+
+              <!-- 状态设置区域 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <el-icon class="section-icon"><Setting /></el-icon>
+                  <span class="section-title">状态设置</span>
+                </div>
+                <div class="section-content">
+                  <el-row :gutter="16">
+                    <el-col :span="12">
+                      <el-form-item label="商品状态">
+                        <el-radio-group v-model="productForm.status" class="status-radio">
+                          <el-radio label="on" value="on">
+                            <el-icon class="status-icon success"><CircleCheck /></el-icon>
+                            上架
+                          </el-radio>
+                          <el-radio label="off" value="off">
+                            <el-icon class="status-icon danger"><CircleClose /></el-icon>
+                            下架
+                          </el-radio>
+                        </el-radio-group>
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12">
+                      <el-form-item label="排序权重">
+                        <el-input-number 
+                          v-model="productForm.sort" 
+                          :min="0" 
+                          style="width: 100%"
+                          placeholder="数值越大排序越靠前"
+                          controls-position="right"
+                        />
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                </div>
+              </div>
+
+              <!-- 配送设置区域 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <el-icon class="section-icon"><Van /></el-icon>
+                  <span class="section-title">配送设置</span>
+                </div>
+                <div class="section-content">
+                  <el-row :gutter="16">
+                    <el-col :span="12">
+                      <el-form-item label="免费配送">
+                        <el-switch 
+                          v-model="productForm.freeShipping"
+                          active-text="免费"
+                          inactive-text="收费"
+                          inline-prompt
+                        />
+                      </el-form-item>
+                    </el-col>
+                    <el-col :span="12" v-if="!productForm.freeShipping">
+                      <el-form-item label="配送费用">
+                        <el-input-number 
+                          v-model="productForm.shippingFee" 
+                          :min="0" 
+                          :precision="2"
+                          style="width: 100%"
+                          placeholder="0.00"
+                          controls-position="right"
+                        />
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+                </div>
+              </div>
+            </div>
+
+            <!-- 右侧：图片和参数 -->
+            <div class="form-section-right">
+              <!-- 商品图片区域 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <el-icon class="section-icon"><Picture /></el-icon>
+                  <span class="section-title">商品图片</span>
+                </div>
+                <div class="section-content">
+                  <el-form-item label="商品主图">
+                    <div class="image-upload-container">
+                      <el-upload
+                        action="/api/upload/product"
+                        :headers="authHeaders"
+                        :show-file-list="false"
+                        :on-success="handleMainImageSuccess"
+                        :on-error="handleUploadError"
+                        :on-progress="handleUploadProgress"
+                        :before-upload="beforeImageUpload"
+                        name="image"
+                      >
+                        <img v-if="productForm.image" :src="productForm.image" class="uploaded-main-image" />
+                        <div v-else class="upload-placeholder">
+                          <el-icon class="upload-icon"><Plus /></el-icon>
+                          <div class="upload-text">上传主图</div>
+                        </div>
+                      </el-upload>
+                      <div class="upload-tip">建议尺寸：400x400px，支持JPG、PNG格式，大小不超过2MB</div>
+                    </div>
+                  </el-form-item>
+
+                  <el-form-item label="商品图片集">
+                    <div class="gallery-upload-container">
+                      <el-upload
+                        class="gallery-uploader"
+                        action="/api/upload/product-gallery"
+                        :headers="authHeaders"
+                        list-type="picture-card"
+                        :file-list="productForm.imageGallery"
+                        :on-success="handleGallerySuccess"
+                        :on-remove="handleGalleryRemove"
+                        :on-error="handleUploadError"
+                        :on-progress="handleUploadProgress"
+                        :before-upload="beforeImageUpload"
+                        name="images"
+                        multiple
+                        :limit="5"
+                      >
+                        <el-icon class="gallery-upload-icon"><Plus /></el-icon>
+                      </el-upload>
+                      <div class="upload-tip">最多上传5张图片，建议尺寸：800x800px</div>
+                    </div>
+                  </el-form-item>
+                </div>
+              </div>
+
+              <!-- 规格参数区域 -->
+              <div class="form-section">
+                <div class="section-header">
+                  <el-icon class="section-icon"><List /></el-icon>
+                  <span class="section-title">规格参数</span>
+                </div>
+                <div class="section-content">
+                  <div class="params-container">
+                    <div v-for="(param, index) in productForm.params" :key="index" class="param-item">
+                      <el-input 
+                        v-model="param.key" 
+                        placeholder="参数名称" 
+                        class="param-input"
+                        clearable
+                      />
+                      <el-input 
+                        v-model="param.value" 
+                        placeholder="参数值" 
+                        class="param-input"
+                        clearable
+                      />
+                      <el-button 
+                        type="danger" 
+                        icon="Delete" 
+                        circle 
+                        size="small"
+                        @click="removeParam(index)"
+                        class="param-delete-btn"
+                      />
+                    </div>
+                    <el-button 
+                      type="primary" 
+                      plain 
+                      @click="addParam"
+                      class="add-param-btn"
+                    >
+                      <el-icon><Plus /></el-icon>
+                      添加参数
+                    </el-button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </el-form>
+      </div>
+      
+      <template #footer>
+        <div class="dialog-footer">
+          <el-button @click="formDialogVisible = false" size="large">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleSubmit" 
+            :loading="submitting"
+            size="large"
+          >
+            {{ isEdit ? '更新商品' : '添加商品' }}
+          </el-button>
+        </div>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -620,9 +960,10 @@ import { ref, reactive, onMounted, watch, nextTick, computed, onUnmounted } from
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { 
-  Search, Filter, RefreshLeft, Setting, Refresh, Download, Delete, Plus, Picture, QuestionFilled, Upload
+  Search, Filter, RefreshLeft, Setting, Refresh, Download, Delete, Plus, Picture, QuestionFilled, Upload,
+  Goods, Document, Van, List, CircleCheck, CircleClose
 } from '@element-plus/icons-vue'
-import { getProducts, deleteProduct, updateProduct } from '@/api/product'
+import { getProducts, deleteProduct, updateProduct, createProduct } from '@/api/product'
 import ProductBatchImport from './ProductBatchImport.vue'
 
 const router = useRouter()
@@ -637,6 +978,10 @@ const detailDrawerVisible = ref(false)
 const selectedProductId = ref('')
 const selectedProductData = ref(null)
 const batchImportVisible = ref(false)
+const formDialogVisible = ref(false)
+const isEdit = ref(false)
+const submitting = ref(false)
+const productFormRef = ref(null)
 
 // 计算是否有活跃的筛选条件
 const hasActiveFilters = computed(() => {
@@ -736,16 +1081,22 @@ const fetchProductList = async () => {
         name: product.name,
         description: product.description,
         price: product.price,
-        image: product.imageUrl || '/assets/images/products/default.png',
+        originalPrice: product.originalPrice, // 添加原价字段
+        image: product.imageUrl || product.image || '/assets/images/products/default.png',
+        imageUrl: product.imageUrl, // 添加主图URL字段
+        imageGallery: product.imageGallery || [], // 添加图片集字段
         category: product.category,
         stock: product.stock,
         sales: product.sales,
         tag: product.tag,
+        tags: product.tags || (product.tag ? [product.tag] : []), // 添加标签数组字段
         status: product.isActive ? 'on' : 'off',
         createdAt: new Date(product.createdAt).toLocaleString('zh-CN'),
         isActive: product.isActive,
         rating: product.rating || 0,
-        ratingsCount: product.ratingsCount || 0
+        ratingsCount: product.ratingsCount || 0,
+        unit: product.unit || '瓶', // 添加单位字段
+        detailContent: product.detailContent || '' // 添加详情内容字段
       }))
       
       // 设置总数
@@ -802,10 +1153,19 @@ const getCategoryName = (category) => {
     'soda': '气泡水',
     '纯净水': '纯净水',
     '矿泉水': '矿泉水',
-    '家庭装': '家庭装',
     '气泡水': '气泡水'
   }
   return categoryMap[category] || category || '未知'
+}
+
+// 将英文分类转换为中文分类（用于编辑表单）
+const convertCategoryToForm = (category) => {
+  const categoryMap = {
+    'pure': '纯净水',
+    'mineral': '矿泉水',
+    'soda': '气泡水'
+  }
+  return categoryMap[category] || category || ''
 }
 
 // 获取类别类型
@@ -816,15 +1176,26 @@ const getCategoryType = (category) => {
     'soda': 'warning',
     '纯净水': 'primary',
     '矿泉水': 'success',
-    '家庭装': 'info',
     '气泡水': 'warning'
   }
   return typeMap[category] || ''
 }
 
+// 将中文分类转换为英文分类（用于提交数据）
+const convertCategoryToApi = (category) => {
+  const categoryMap = {
+    '纯净水': 'pure',
+    '矿泉水': 'mineral',
+    '气泡水': 'soda'
+  }
+  return categoryMap[category] || category || ''
+}
+
 // 添加商品
 const handleAdd = () => {
-  router.push('/products/add')
+  isEdit.value = false
+  resetProductForm()
+  formDialogVisible.value = true
 }
 
 // 批量导入商品
@@ -834,7 +1205,9 @@ const handleBatchImport = () => {
 
 // 编辑商品
 const handleEdit = (row) => {
-  router.push(`/products/edit/${row.id}`)
+  isEdit.value = true
+  fillProductForm(row)
+  formDialogVisible.value = true
 }
 
 // 查看商品
@@ -1082,6 +1455,331 @@ const handleBatchImportSuccess = () => {
 const handleBatchImportError = (error) => {
   ElMessage.error(`批量导入失败: ${error.message || '未知错误'}`)
 }
+
+// 预定义标签
+const predefinedTags = ref([
+  '热销',
+  '新品',
+  '优惠',
+  '限时特价',
+  '包邮',
+  '健康',
+  '天然',
+  '无糖',
+  '低卡',
+  '进口',
+  '有机',
+  '推荐'
+])
+
+// 商品表单数据
+const productForm = reactive({
+  id: '',
+  name: '',
+  category: '',
+  tags: [],
+  price: 0,
+  stock: 0,
+  unit: '个',
+  status: 'on',
+  sort: 0,
+  brief: '',
+  description: '',
+  freeShipping: true,
+  shippingFee: 0,
+  image: '',
+  imageGallery: [],
+  params: []
+})
+
+// 表单验证规则
+const formRules = {
+  name: [
+    { required: true, message: '请输入商品名称', trigger: 'blur' },
+    { min: 2, max: 50, message: '长度在 2 到 50 个字符', trigger: 'blur' }
+  ],
+  category: [
+    { required: true, message: '请选择商品分类', trigger: 'change' }
+  ],
+  price: [
+    { required: true, message: '请输入商品价格', trigger: 'blur' },
+    { type: 'number', min: 0, message: '价格必须大于等于0', trigger: 'blur' }
+  ],
+  stock: [
+    { required: true, message: '请输入商品库存', trigger: 'blur' },
+    { type: 'number', min: 0, message: '库存必须大于等于0', trigger: 'blur' }
+  ],
+  unit: [
+    { required: true, message: '请输入商品单位', trigger: 'blur' }
+  ]
+}
+
+// 获取认证头
+const authHeaders = computed(() => {
+  try {
+    const token = localStorage?.getItem('token')
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  } catch (error) {
+    console.warn('无法访问 localStorage:', error)
+    return {}
+  }
+})
+
+// 重置表单
+const resetProductForm = () => {
+  Object.assign(productForm, {
+    id: '',
+    name: '',
+    category: '',
+    tags: [],
+    price: 0,
+    stock: 0,
+    unit: '个',
+    status: 'on',
+    sort: 0,
+    brief: '',
+    description: '',
+    freeShipping: true,
+    shippingFee: 0,
+    image: '',
+    imageGallery: [],
+    params: []
+  })
+  if (productFormRef.value) {
+    productFormRef.value.clearValidate()
+  }
+}
+
+// 填充表单数据
+const fillProductForm = (product) => {
+  console.log('填充表单数据 - 原始商品数据:', product)
+  console.log('商品图片集字段:', product.imageGallery)
+  console.log('商品images字段:', product.images)
+  
+  // 处理标签数据：将字符串转换为数组
+  let tags = []
+  if (product.tag) {
+    if (Array.isArray(product.tag)) {
+      tags = product.tag
+    } else if (typeof product.tag === 'string') {
+      // 如果是逗号分隔的字符串，转换为数组
+      tags = product.tag.split(',').map(tag => tag.trim()).filter(tag => tag)
+    }
+  }
+  
+  // 处理图片集数据，兼容多种字段名
+  const imageGalleryData = product.imageGallery || product.images || []
+  console.log('处理后的图片集数据:', imageGalleryData)
+  
+  Object.assign(productForm, {
+    id: product.id,
+    name: product.name || '',
+    category: convertCategoryToForm(product.category) || '',
+    tags: tags,
+    price: product.price || 0,
+    stock: product.stock || 0,
+    unit: product.unit || '个',
+    status: product.isActive ? 'on' : 'off', // 从 isActive 转换为 status
+    sort: product.sort || 0,
+    brief: product.brief || '',
+    description: product.description || '',
+    freeShipping: product.freeShipping !== false,
+    shippingFee: product.shippingFee || 0,
+    image: product.imageUrl || product.image || '', // 支持两种字段名
+    imageGallery: imageGalleryData.map((url, index) => ({
+      url: url,
+      name: `图片${index + 1}`,
+      uid: Date.now() + index // 生成唯一ID
+    })),
+    params: product.params || []
+  })
+  
+  console.log('填充后的表单数据:', productForm)
+}
+
+// 添加规格参数
+const addParam = () => {
+  productForm.params.push({ key: '', value: '' })
+}
+
+// 删除规格参数
+const removeParam = (index) => {
+  productForm.params.splice(index, 1)
+}
+
+// 上传主图成功回调
+const handleMainImageSuccess = (response, file) => {
+  console.log('主图上传响应:', response)
+  console.log('上传文件信息:', file)
+  
+  // 兼容不同的响应格式
+  if (response && response.success) {
+    // 尝试不同的路径获取图片URL
+    const imageUrl = response.data?.url || response.url || response.data?.path || response.path
+    
+    if (imageUrl) {
+      // 确保URL是完整的，添加后端服务器地址
+      const baseUrl = 'http://localhost:5001'
+      productForm.image = imageUrl.startsWith('http') ? imageUrl : `${baseUrl}${imageUrl}`
+      
+      ElMessage.success('主图上传成功')
+      console.log('主图URL设置为:', productForm.image)
+      
+      // 强制更新视图
+      nextTick(() => {
+        console.log('主图更新后的值:', productForm.image)
+      })
+    } else {
+      console.error('无法从响应中获取图片URL:', response)
+      ElMessage.error('上传成功但无法获取图片地址')
+    }
+  } else {
+    console.error('主图上传失败:', response)
+    ElMessage.error('上传失败: ' + (response?.message || response?.msg || '未知错误'))
+  }
+}
+
+// 上传图片集成功回调
+const handleGallerySuccess = (response, file) => {
+  console.log('图片集上传响应:', response)
+  console.log('上传文件信息:', file)
+  
+  // 兼容不同的响应格式
+  if (response && response.success) {
+    // 后端返回的是数组格式，取第一个元素
+    const imageData = Array.isArray(response.data) ? response.data[0] : response.data
+    const imageUrl = imageData?.url || response.url || imageData?.path || response.path
+    const fileName = imageData?.filename || response.filename || file.name
+    
+    if (imageUrl) {
+      // 确保URL是完整的，添加后端服务器地址
+      const baseUrl = 'http://localhost:5001'
+      const fullUrl = imageUrl.startsWith('http') ? imageUrl : `${baseUrl}${imageUrl}`
+      
+      productForm.imageGallery.push({
+        url: fullUrl,
+        name: fileName,
+        uid: file.uid // 添加uid用于删除时识别
+      })
+      ElMessage.success('图片上传成功')
+      console.log('图片集添加:', { url: fullUrl, name: fileName })
+    } else {
+      console.error('无法从响应中获取图片URL:', response)
+      console.error('响应数据结构:', JSON.stringify(response, null, 2))
+      ElMessage.error('上传成功但无法获取图片地址')
+    }
+  } else {
+    console.error('图片集上传失败:', response)
+    ElMessage.error('上传失败: ' + (response?.message || response?.msg || '未知错误'))
+  }
+}
+
+// 移除图片集中的图片
+const handleGalleryRemove = (file) => {
+  console.log('移除图片:', file)
+  const index = productForm.imageGallery.findIndex(img => img.url === file.url || img.uid === file.uid)
+  if (index !== -1) {
+    productForm.imageGallery.splice(index, 1)
+    ElMessage.success('图片已移除')
+  }
+}
+
+// 上传失败回调
+const handleUploadError = (error, file) => {
+  console.error('上传失败:', error, file)
+  
+  // 简单显示错误信息，让axios拦截器处理认证相关的错误
+  let errorMessage = `文件 ${file.name} 上传失败`
+  
+  if (error && error.message) {
+    try {
+      const errorData = JSON.parse(error.message)
+      errorMessage = `上传失败: ${errorData.message || '未知错误'}`
+    } catch (e) {
+      errorMessage = `上传失败: ${error.message || '未知错误'}`
+    }
+  }
+  
+  ElMessage.error(errorMessage)
+}
+
+// 上传进度回调
+const handleUploadProgress = (event, file) => {
+  console.log('上传进度:', Math.round(event.percent), '%', file.name)
+}
+
+// 图片上传前验证
+const beforeImageUpload = (file) => {
+  const isImage = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'].includes(file.type)
+  const isLt2M = file.size / 1024 / 1024 < 2
+  
+  if (!isImage) {
+    ElMessage.error('只能上传JPG/PNG/GIF/WebP格式的图片!')
+    return false
+  }
+  
+  if (!isLt2M) {
+    ElMessage.error('图片大小不能超过2MB!')
+    return false
+  }
+  
+  return true
+}
+
+// 提交表单
+const handleSubmit = async () => {
+  if (!productFormRef.value) return
+  
+  try {
+    await productFormRef.value.validate()
+    submitting.value = true
+    
+    // 处理图片集数据格式
+    const imageGalleryUrls = productForm.imageGallery.map(img => {
+      if (typeof img === 'string') {
+        return img
+      }
+      return img.url || img.response?.data?.url || img
+    }).filter(url => url)
+    
+    // 处理数据格式转换，匹配后端模型
+    const productData = {
+      name: productForm.name,
+      description: productForm.description || productForm.brief || '暂无描述', // 确保有描述字段
+      price: productForm.price,
+      stock: productForm.stock,
+      imageUrl: productForm.image, // 后端期望 imageUrl 字段
+      imageGallery: imageGalleryUrls, // 添加图片集数据
+      category: convertCategoryToApi(productForm.category),
+      tag: Array.isArray(productForm.tags) ? productForm.tags.join(',') : (productForm.tags || ''), // 转换为字符串
+      isActive: productForm.status === 'on', // 转换状态格式
+      sales: productForm.sales || 0,
+      rating: productForm.rating || 0,
+      ratingsCount: productForm.ratingsCount || 0
+    }
+    
+    console.log('提交的商品数据:', productData)
+    
+    if (isEdit.value) {
+      await updateProduct(productForm.id, productData)
+      ElMessage.success('商品更新成功')
+    } else {
+      await createProduct(productData)
+      ElMessage.success('商品添加成功')
+    }
+    
+    formDialogVisible.value = false
+    fetchProductList()
+  } catch (error) {
+    console.error('保存商品失败', error)
+    console.error('错误详情:', error.response?.data)
+    ElMessage.error('保存失败: ' + (error.response?.data?.message || error.message || '未知错误'))
+  } finally {
+    submitting.value = false
+  }
+}
+
+
 </script>
 
 <style scoped>
@@ -1508,5 +2206,567 @@ const handleBatchImportError = (error) => {
 
 .detail-actions .el-button {
   flex: 1;
+}
+
+/* 商品表单弹窗样式 */
+.product-form {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.product-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+
+.product-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #606266;
+}
+
+.product-form :deep(.el-input-number) {
+  width: 100%;
+}
+
+.product-form :deep(.el-textarea__inner) {
+  resize: vertical;
+}
+
+/* 图片上传样式 */
+.image-uploader {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-uploader:hover {
+  border-color: #409eff;
+}
+
+.image-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+}
+
+.uploaded-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-uploader :deep(.el-upload--picture-card) {
+  width: 80px;
+  height: 80px;
+}
+
+.gallery-uploader :deep(.el-upload-list__item) {
+  width: 80px;
+  height: 80px;
+}
+
+.gallery-uploader-icon {
+  font-size: 20px;
+  color: #8c939d;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* 规格参数样式 */
+.params-container {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 16px;
+  background-color: #fafafa;
+}
+
+.param-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.param-item:last-of-type {
+  margin-bottom: 16px;
+}
+
+/* 对话框样式 */
+:deep(.el-dialog) {
+  border-radius: 8px;
+}
+
+:deep(.el-dialog__header) {
+  padding: 20px 20px 10px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+:deep(.el-dialog__body) {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 10px 20px 20px;
+  border-top: 1px solid #ebeef5;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  :deep(.el-dialog) {
+    width: 95% !important;
+    margin: 0 auto;
+  }
+  
+  .product-form {
+    max-height: 50vh;
+  }
+  
+  .param-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .param-item .el-input {
+    width: 100% !important;
+    margin-right: 0 !important;
+  }
+}
+
+/* 商品表单弹窗样式 */
+.product-form {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+.product-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+
+.product-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #606266;
+}
+
+.product-form :deep(.el-input-number) {
+  width: 100%;
+}
+
+.product-form :deep(.el-textarea__inner) {
+  resize: vertical;
+}
+
+/* 图片上传样式 */
+.image-uploader {
+  border: 1px dashed #d9d9d9;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.3s;
+  width: 120px;
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-uploader:hover {
+  border-color: #409eff;
+}
+
+.image-uploader-icon {
+  font-size: 28px;
+  color: #8c939d;
+}
+
+.uploaded-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gallery-uploader :deep(.el-upload--picture-card) {
+  width: 80px;
+  height: 80px;
+}
+
+.gallery-uploader :deep(.el-upload-list__item) {
+  width: 80px;
+  height: 80px;
+}
+
+.gallery-uploader-icon {
+  font-size: 20px;
+  color: #8c939d;
+}
+
+.upload-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+
+/* 规格参数样式 */
+.params-container {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+  padding: 16px;
+  background-color: #fafafa;
+}
+
+.param-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.param-item:last-of-type {
+  margin-bottom: 16px;
+}
+
+/* 对话框样式 */
+:deep(.el-dialog) {
+  border-radius: 8px;
+}
+
+:deep(.el-dialog__header) {
+  padding: 20px 20px 10px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+:deep(.el-dialog__body) {
+  padding: 20px;
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+:deep(.el-dialog__footer) {
+  padding: 10px 20px 20px;
+  border-top: 1px solid #ebeef5;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+  :deep(.el-dialog) {
+    width: 95% !important;
+    margin: 0 auto;
+  }
+  
+  .product-form {
+    max-height: 50vh;
+  }
+  
+  .param-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .param-item .el-input {
+    width: 100% !important;
+    margin-right: 0 !important;
+  }
+}
+
+/* 优化后的商品表单弹窗样式 */
+.product-dialog :deep(.el-dialog) {
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.product-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+  padding: 20px 24px;
+}
+
+.product-dialog :deep(.el-dialog__title) {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.product-dialog :deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: white;
+  font-size: 20px;
+}
+
+.product-form-container {
+  padding: 0;
+}
+
+.form-sections {
+  display: flex;
+  gap: 24px;
+}
+
+.form-section-left {
+  flex: 2;
+}
+
+.form-section-right {
+  flex: 1;
+  min-width: 300px;
+}
+
+.form-section {
+  margin-bottom: 24px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.section-icon {
+  font-size: 16px;
+  color: #667eea;
+  margin-right: 8px;
+}
+
+.section-title {
+  font-weight: 600;
+  color: #334155;
+  font-size: 14px;
+}
+
+.section-content {
+  padding: 16px;
+}
+
+/* 确保输入框有足够的最小宽度 */
+.section-content :deep(.el-input-number) {
+  min-width: 180px;
+}
+
+.section-content :deep(.el-input) {
+  min-width: 120px;
+}
+
+.section-content :deep(.el-select) {
+  min-width: 120px;
+}
+
+.status-radio {
+  display: flex;
+  gap: 16px;
+}
+
+.status-radio .el-radio {
+  display: flex;
+  align-items: center;
+  margin-right: 0;
+}
+
+.status-icon {
+  margin-right: 4px;
+  font-size: 14px;
+}
+
+.status-icon.success {
+  color: #10b981;
+}
+
+.status-icon.danger {
+  color: #ef4444;
+}
+
+.image-upload-container {
+  text-align: center;
+}
+
+.main-image-uploader {
+  display: inline-block;
+}
+
+.main-image-uploader :deep(.el-upload) {
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  width: 160px;
+  height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.main-image-uploader :deep(.el-upload:hover) {
+  border-color: #667eea;
+  background-color: #f8fafc;
+}
+
+.uploaded-main-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9ca3af;
+}
+
+.upload-icon {
+  font-size: 32px;
+  margin-bottom: 8px;
+}
+
+.upload-text {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.gallery-upload-container {
+  text-align: center;
+}
+
+.gallery-uploader :deep(.el-upload--picture-card) {
+  width: 80px;
+  height: 80px;
+  border: 2px dashed #d1d5db;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.gallery-uploader :deep(.el-upload--picture-card:hover) {
+  border-color: #667eea;
+}
+
+.gallery-upload-icon {
+  font-size: 20px;
+  color: #9ca3af;
+}
+
+.param-input {
+  flex: 1;
+}
+
+.param-delete-btn {
+  flex-shrink: 0;
+}
+
+.add-param-btn {
+  width: 100%;
+  border-style: dashed;
+  color: #667eea;
+  border-color: #667eea;
+}
+
+.add-param-btn:hover {
+  background-color: #f0f4ff;
+}
+
+.tag-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+/* 确保输入框有足够的最小宽度 */
+.product-form :deep(.el-input-number) {
+  min-width: 180px;
+}
+
+.product-form :deep(.el-input) {
+  min-width: 120px;
+}
+
+.product-form :deep(.el-select) {
+  min-width: 120px;
+}
+
+/* 响应式优化 */
+@media (max-width: 1200px) {
+  .form-sections {
+    flex-direction: column;
+  }
+  
+  .form-section-right {
+    min-width: auto;
+  }
+  
+  /* 小屏幕下调整最小宽度 */
+  .product-form :deep(.el-input-number) {
+    min-width: 150px;
+  }
+  
+  .product-form :deep(.el-input) {
+    min-width: 100px;
+  }
+}
+
+/* 确保输入框有足够的最小宽度 */
+.product-form :deep(.el-input-number) {
+  min-width: 180px;
+}
+
+.product-form :deep(.el-input) {
+  min-width: 120px;
+}
+
+.product-form :deep(.el-select) {
+  min-width: 120px;
+}
+
+/* 小屏幕下调整最小宽度 */
+@media (max-width: 1200px) {
+  .product-form :deep(.el-input-number) {
+    min-width: 150px;
+  }
+  
+  .product-form :deep(.el-input) {
+    min-width: 100px;
+  }
+}
+
+.tag-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+  line-height: 1.4;
 }
 </style> 

@@ -317,92 +317,183 @@
     <el-dialog
       v-model="formDialogVisible"
       :title="isEdit ? '编辑优惠券' : '添加优惠券'"
-      width="600px"
+      width="700px"
       :close-on-click-modal="false"
+      class="coupon-dialog"
     >
-      <el-form
-        ref="couponFormRef"
-        :model="couponForm"
-        :rules="formRules"
-        label-width="120px"
-      >
-        <el-form-item label="优惠券名称" prop="name">
-          <el-input v-model="couponForm.name" placeholder="请输入优惠券名称" />
-        </el-form-item>
-        
-        <el-form-item label="优惠券代码" prop="code">
-          <el-input v-model="couponForm.code" placeholder="请输入优惠券代码">
-            <template #append>
-              <el-button @click="generateCode">生成代码</el-button>
-            </template>
-          </el-input>
-        </el-form-item>
-        
-        <el-form-item label="优惠券描述" prop="description">
-          <el-input 
-            v-model="couponForm.description" 
-            type="textarea" 
-            rows="3"
-            placeholder="请输入优惠券描述（可选）"
-          />
-        </el-form-item>
-        
-        <el-form-item label="优惠券类型" prop="type">
-          <el-select v-model="couponForm.type" style="width: 100%">
-            <el-option label="满减券" value="discount" />
-            <el-option label="折扣券" value="percentage" />
-            <el-option label="抵扣券" value="free" />
-          </el-select>
-        </el-form-item>
-        
-        <el-form-item 
-          :label="getDiscountLabel()" 
-          prop="discountValue"
+      <div class="coupon-form-container">
+        <el-form
+          ref="couponFormRef"
+          :model="couponForm"
+          :rules="formRules"
+          label-width="100px"
+          class="coupon-form"
         >
-          <el-input v-model="couponForm.discountValue" type="number">
-            <template #append>
-              {{ getDiscountUnit() }}
-            </template>
-          </el-input>
-        </el-form-item>
-        
-        <el-form-item label="最低消费" prop="minOrderAmount">
-          <el-input v-model="couponForm.minOrderAmount" type="number" placeholder="0 表示无限制">
-            <template #append>元</template>
-          </el-input>
-        </el-form-item>
-        
-        <el-form-item label="发行数量" prop="totalCount">
-          <el-input v-model="couponForm.totalCount" type="number" placeholder="0 表示无限制">
-            <template #append>张</template>
-          </el-input>
-        </el-form-item>
-        
-        <el-form-item label="有效期" prop="dateRange">
-          <el-date-picker
-            v-model="couponForm.dateRange"
-            type="datetimerange"
-            range-separator="至"
-            start-placeholder="开始时间"
-            end-placeholder="结束时间"
-            format="YYYY-MM-DD HH:mm:ss"
-            value-format="YYYY-MM-DD HH:mm:ss"
-            style="width: 100%"
-          />
-        </el-form-item>
-        
-        <el-form-item label="是否启用" prop="isActive">
-          <el-switch v-model="couponForm.isActive" />
-        </el-form-item>
-      </el-form>
+          <!-- 基本信息区域 -->
+          <div class="form-section">
+            <div class="section-header">
+              <el-icon class="section-icon"><Ticket /></el-icon>
+              <span class="section-title">基本信息</span>
+            </div>
+            <div class="section-content">
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="优惠券名称" prop="name">
+                    <el-input 
+                      v-model="couponForm.name" 
+                      placeholder="请输入优惠券名称"
+                      clearable
+                    />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="优惠券代码" prop="code">
+                    <el-input v-model="couponForm.code" placeholder="请输入优惠券代码">
+                      <template #append>
+                        <el-button @click="generateCode" type="primary">生成</el-button>
+                      </template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              
+              <el-form-item label="优惠券描述" prop="description">
+                <el-input 
+                  v-model="couponForm.description" 
+                  type="textarea" 
+                  :rows="3"
+                  placeholder="请输入优惠券描述（可选）"
+                  show-word-limit
+                  maxlength="200"
+                />
+              </el-form-item>
+            </div>
+          </div>
+
+          <!-- 优惠设置区域 -->
+          <div class="form-section">
+            <div class="section-header">
+              <el-icon class="section-icon"><Money /></el-icon>
+              <span class="section-title">优惠设置</span>
+            </div>
+            <div class="section-content">
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="优惠券类型" prop="type">
+                    <el-select v-model="couponForm.type" style="width: 100%" clearable>
+                      <el-option label="满减券" value="discount">
+                        <span style="float: left">满减券</span>
+                        <span style="float: right; color: #8492a6; font-size: 13px">满额减免</span>
+                      </el-option>
+                      <el-option label="折扣券" value="percentage">
+                        <span style="float: left">折扣券</span>
+                        <span style="float: right; color: #8492a6; font-size: 13px">按比例折扣</span>
+                      </el-option>
+                      <el-option label="抵扣券" value="free">
+                        <span style="float: left">抵扣券</span>
+                        <span style="float: right; color: #8492a6; font-size: 13px">直接抵扣</span>
+                      </el-option>
+                    </el-select>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item 
+                    :label="getDiscountLabel()" 
+                    prop="discountValue"
+                  >
+                    <el-input-number
+                      v-model="couponForm.discountValue"
+                      :min="0"
+                      :precision="couponForm.type === 'percentage' ? 0 : 2"
+                      :max="couponForm.type === 'percentage' ? 100 : undefined"
+                      style="width: 100%"
+                      controls-position="right"
+                    >
+                      <template #append>
+                        {{ getDiscountUnit() }}
+                      </template>
+                    </el-input-number>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+
+              <el-row :gutter="16">
+                <el-col :span="12">
+                  <el-form-item label="最低消费" prop="minOrderAmount">
+                    <el-input-number
+                      v-model="couponForm.minOrderAmount"
+                      :min="0"
+                      :precision="2"
+                      style="width: 100%"
+                      placeholder="0 表示无限制"
+                      controls-position="right"
+                    >
+                      <template #append>元</template>
+                    </el-input-number>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="发行数量" prop="totalCount">
+                    <el-input-number
+                      v-model="couponForm.totalCount"
+                      :min="0"
+                      style="width: 100%"
+                      placeholder="0 表示无限制"
+                      controls-position="right"
+                    >
+                      <template #append>张</template>
+                    </el-input-number>
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </div>
+          </div>
+
+          <!-- 有效期设置区域 -->
+          <div class="form-section">
+            <div class="section-header">
+              <el-icon class="section-icon"><Calendar /></el-icon>
+              <span class="section-title">有效期设置</span>
+            </div>
+            <div class="section-content">
+              <el-form-item label="有效期" prop="dateRange">
+                <el-date-picker
+                  v-model="couponForm.dateRange"
+                  type="datetimerange"
+                  range-separator="至"
+                  start-placeholder="开始时间"
+                  end-placeholder="结束时间"
+                  format="YYYY-MM-DD HH:mm:ss"
+                  value-format="YYYY-MM-DD HH:mm:ss"
+                  style="width: 100%"
+                />
+              </el-form-item>
+              
+              <el-form-item label="是否启用" prop="isActive">
+                <el-switch 
+                  v-model="couponForm.isActive"
+                  active-text="启用"
+                  inactive-text="禁用"
+                  inline-prompt
+                />
+              </el-form-item>
+            </div>
+          </div>
+        </el-form>
+      </div>
       
       <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="formDialogVisible = false">取消</el-button>
-          <el-button type="primary" @click="handleSubmit" :loading="submitting">
-            {{ isEdit ? '更新' : '创建' }}
+        <div class="dialog-footer">
+          <el-button @click="formDialogVisible = false" size="large">取消</el-button>
+          <el-button 
+            type="primary" 
+            @click="handleSubmit" 
+            :loading="submitting"
+            size="large"
+          >
+            {{ isEdit ? '更新优惠券' : '创建优惠券' }}
           </el-button>
-        </span>
+        </div>
       </template>
     </el-dialog>
   </div>
@@ -411,7 +502,7 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, RefreshLeft, Refresh, Plus, QuestionFilled } from '@element-plus/icons-vue'
+import { Search, RefreshLeft, Refresh, Plus, QuestionFilled, Ticket, Money, Calendar } from '@element-plus/icons-vue'
 import { getCoupons, createCoupon, updateCoupon, deleteCoupon, updateCouponStatus } from '@/api/coupon'
 
 const loading = ref(false)
@@ -1135,6 +1226,103 @@ onMounted(() => {
 :deep(.el-button:focus) {
   outline: none;
   box-shadow: none;
+}
+
+/* 优化后的优惠券表单弹窗样式 */
+.coupon-dialog :deep(.el-dialog) {
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+}
+
+.coupon-dialog :deep(.el-dialog__header) {
+  background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%);
+  color: white;
+  border-radius: 12px 12px 0 0;
+  padding: 20px 24px;
+}
+
+.coupon-dialog :deep(.el-dialog__title) {
+  color: white;
+  font-weight: 600;
+  font-size: 18px;
+}
+
+.coupon-dialog :deep(.el-dialog__headerbtn .el-dialog__close) {
+  color: white;
+  font-size: 20px;
+}
+
+.coupon-form-container {
+  padding: 0;
+}
+
+.coupon-form {
+  max-height: 65vh;
+  overflow-y: auto;
+  padding-right: 8px;
+}
+
+.form-section {
+  margin-bottom: 24px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.section-icon {
+  font-size: 16px;
+  color: #ff6b6b;
+  margin-right: 8px;
+}
+
+.section-title {
+  font-weight: 600;
+  color: #334155;
+  font-size: 14px;
+}
+
+.section-content {
+  padding: 16px;
+}
+
+.coupon-form :deep(.el-form-item) {
+  margin-bottom: 18px;
+}
+
+.coupon-form :deep(.el-form-item__label) {
+  font-weight: 500;
+  color: #606266;
+}
+
+.coupon-form :deep(.el-input-number) {
+  width: 100%;
+}
+
+.coupon-form :deep(.el-textarea__inner) {
+  resize: vertical;
+}
+
+.coupon-form :deep(.el-select-dropdown__item) {
+  height: auto;
+  padding: 8px 20px;
+  line-height: 1.4;
+}
+
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid #e2e8f0;
 }
 
 /* 对话框样式 */

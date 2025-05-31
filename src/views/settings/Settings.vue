@@ -19,7 +19,7 @@
         <div class="section-title">基本设置</div>
         <el-form label-width="120px">
           <el-form-item label="系统名称">
-            <el-input value="水站管理系统" disabled />
+            <el-input value="SPRINKLE" disabled />
           </el-form-item>
           <el-form-item label="系统版本">
             <el-input value="1.0.0" disabled />
