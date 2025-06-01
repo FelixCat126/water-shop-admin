@@ -38,7 +38,7 @@
           <div class="toolbar-right">
             <el-tooltip content="刷新" placement="top">
               <el-button 
-                type="text" 
+                link
                 @click="getAdminList"
               >
                 <el-icon><Refresh /></el-icon>

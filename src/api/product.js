@@ -107,4 +107,32 @@ export function uploadProductImage(data) {
     },
     data
   })
+}
+
+/**
+ * 下载商品批量导入模板
+ * @returns {Promise<Blob>} - 返回Excel文件
+ */
+export function downloadImportTemplate() {
+  return request({
+    url: '/admin/products/import/template',
+    method: 'get',
+    responseType: 'blob'
+  })
+}
+
+/**
+ * 批量导入商品
+ * @param {FormData} formData - 包含Excel文件的表单数据
+ * @returns {Promise<Object>} - 返回导入结果
+ */
+export function importProducts(formData) {
+  return request({
+    url: '/admin/products/import',
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
 } 

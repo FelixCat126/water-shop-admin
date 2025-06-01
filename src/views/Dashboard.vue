@@ -97,10 +97,10 @@
             <template #header>
               <div class="card-header">
                 <span>销售趋势</span>
-                <el-radio-group v-model="chartTimeRange" size="small">
-                  <el-radio-button :label="'week'" value="week">本周</el-radio-button>
-                  <el-radio-button :label="'month'" value="month">本月</el-radio-button>
-                  <el-radio-button :label="'year'" value="year">全年</el-radio-button>
+                <el-radio-group v-model="selectedPeriod">
+                  <el-radio-button value="week">本周</el-radio-button>
+                  <el-radio-button value="month">本月</el-radio-button>
+                  <el-radio-button value="year">全年</el-radio-button>
                 </el-radio-group>
               </div>
             </template>
@@ -220,10 +220,10 @@ import { getProductSales } from '../api/product'
 const router = useRouter()
 
 // 图表时间范围
-const chartTimeRange = ref('week')
+const selectedPeriod = ref('week')
 
 // 监听时间范围变化，更新图表
-watch(chartTimeRange, () => {
+watch(selectedPeriod, () => {
   initSalesChart()
 })
 
@@ -393,11 +393,11 @@ const initSalesChart = async () => {
   
   try {
     // 从API获取销售趋势数据
-    const response = await getSalesTrends(chartTimeRange.value)
+    const response = await getSalesTrends(selectedPeriod.value)
     salesChart.hideLoading()
     
     if (response && response.success && response.data && response.data.salesTrends) {
-      const trendData = response.data.salesTrends[chartTimeRange.value]
+      const trendData = response.data.salesTrends[selectedPeriod.value]
       console.log('销售趋势数据:', trendData)
       
       const option = {
@@ -424,7 +424,7 @@ const initSalesChart = async () => {
           data: trendData.xAxis || [],
           axisLabel: {
             interval: 0,
-            rotate: chartTimeRange.value === 'month' ? 45 : 0
+            rotate: selectedPeriod.value === 'month' ? 45 : 0
           }
         },
         yAxis: [
@@ -991,111 +991,6 @@ onBeforeUnmount(() => {
   text-overflow: ellipsis;
   display: block;
   max-width: 100%;
-}
-
-/* 响应式设计 - 小屏幕适配 */
-@media (max-height: 800px) {
-  .dashboard-container {
-    height: auto;
-    min-height: calc(100vh - 60px);
-    padding-bottom: 20px;
-  }
-  
-  .stats-section {
-    padding: 16px 24px 8px 24px;
-  }
-  
-  .stat-card {
-    height: 100px; /* 增加高度避免内容被遮挡 */
-  }
-  
-  .icon-wrapper {
-    width: 48px;
-    height: 48px;
-    margin-right: 16px;
-  }
-  
-  .icon-wrapper .el-icon {
-    font-size: 24px;
-  }
-  
-  .stat-number {
-    font-size: 22px;
-  }
-  
-  .sales-chart-card, .ranking-card, .pie-card, .order-card {
-    height: 350px; /* 增加高度确保内容完整显示 */
-  }
-  
-  .chart-container {
-    min-height: 260px;
-    height: 260px;
-  }
-  
-  .chart-placeholder {
-    min-height: 240px;
-  }
-  
-  .ranking-list {
-    height: 240px;
-  }
-  
-  .pie-container {
-    min-height: 240px;
-  }
-}
-
-@media (max-height: 700px) {
-  .stats-section {
-    padding: 12px 24px 6px 24px;
-  }
-  
-  .stat-card {
-    height: 90px; /* 增加高度避免内容被遮挡 */
-  }
-  
-  .icon-wrapper {
-    width: 40px;
-    height: 40px;
-    margin-right: 12px;
-  }
-  
-  .icon-wrapper .el-icon {
-    font-size: 20px;
-  }
-  
-  .stat-number {
-    font-size: 20px;
-  }
-  
-  .sales-chart-card, .ranking-card, .pie-card, .order-card {
-    height: 320px; /* 增加高度确保内容完整显示 */
-  }
-  
-  .chart-container {
-    min-height: 220px;
-    height: 220px;
-  }
-  
-  .chart-placeholder {
-    min-height: 200px;
-  }
-  
-  .ranking-list {
-    height: 200px;
-  }
-  
-  .pie-container {
-    min-height: 200px;
-  }
-  
-  .main-content {
-    padding: 8px 0 16px 0;
-  }
-  
-  .chart-row {
-    margin-bottom: 16px;
-  }
 }
 
 /* 响应式设计 - 小屏幕适配 */

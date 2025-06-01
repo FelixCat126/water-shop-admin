@@ -222,7 +222,7 @@
         <div class="toolbar-right">
           <el-tooltip content="列设置" placement="top">
             <el-button 
-              type="text" 
+              link
               @click="columnSettingVisible = true"
             >
               <el-icon><Setting /></el-icon>
@@ -231,7 +231,7 @@
           
           <el-tooltip content="刷新" placement="top">
             <el-button 
-              type="text" 
+              link
               @click="fetchUsers"
             >
               <el-icon><Refresh /></el-icon>
@@ -457,8 +457,25 @@
           align="center"
         >
           <template #default="scope">
-            <el-button link type="primary" @click="handleViewDetail(scope.row)">详情</el-button>
-            <el-button link type="danger" @click="handleDelete(scope.row)">删除</el-button>
+            <el-tooltip content="查看详情" placement="top">
+              <el-button 
+                link 
+                type="primary"
+                @click="handleViewDetail(scope.row)"
+              >
+                详情
+              </el-button>
+            </el-tooltip>
+            
+            <el-tooltip content="删除用户" placement="top">
+              <el-button 
+                link 
+                type="danger"
+                @click="handleDelete(scope.row)"
+              >
+                删除
+              </el-button>
+            </el-tooltip>
           </template>
         </el-table-column>
       </el-table>
@@ -487,7 +504,7 @@
       <div class="column-setting">
         <div class="setting-header">
           <span>选择要显示的列</span>
-          <el-button type="text" @click="handleResetColumns">重置</el-button>
+          <el-button link @click="handleResetColumns">重置</el-button>
         </div>
         <el-checkbox-group v-model="visibleColumns">
           <div v-for="column in allColumns" :key="column.key" class="column-item">

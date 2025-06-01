@@ -144,7 +144,7 @@
         <div class="toolbar-right">
           <el-tooltip content="刷新" placement="top">
             <el-button 
-              type="text" 
+              link
               @click="getContentList"
             >
               <el-icon><Refresh /></el-icon>
@@ -539,8 +539,6 @@ const clearAllFilters = () => {
   getContentList()
 }
 
-
-
 const resetAdvancedFilter = () => {
   console.log('🔄 重置高级筛选')
   Object.assign(searchForm, {
@@ -584,8 +582,6 @@ const handleBatchDelete = async () => {
     }
   }
 }
-
-
 
 const handleAdd = () => {
   console.log('🆕 开始新增内容...')
