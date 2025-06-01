@@ -37,7 +37,7 @@
             <el-icon><RefreshLeft /></el-icon>
             重置
           </el-button>
-          <el-button @click="handleExport">
+          <el-button type="primary" @click="handleExport">
             <el-icon><Download /></el-icon>
             导出订单
           </el-button>
@@ -868,8 +868,95 @@ const handleCancel = (row) => {
 }
 
 // 导出订单
-const handleExport = () => {
-  ElMessage.info('导出功能开发中...')
+const handleExport = async () => {
+  // 判断是否有筛选条件
+  const hasFilters = queryParams.keyword || queryParams.status || queryParams.startDate || queryParams.endDate
+  
+  let ordersToExport = []
+  
+  if (hasFilters) {
+    // 如果有筛选条件，导出当前筛选结果
+    if (orderList.value.length === 0) {
+      ElMessage.warning('当前筛选条件下没有订单数据可导出')
+      return
+    }
+    ordersToExport = orderList.value
+    ElMessage.info(`正在导出筛选后的 ${orderList.value.length} 条订单数据...`)
+  } else {
+    // 如果没有筛选条件，获取并导出全部订单
+    try {
+      ElMessage.info('正在获取全部订单数据，请稍候...')
+      
+      const response = await request({
+        url: '/admin/orders',
+        method: 'get',
+        params: {
+          page: 1,
+          limit: 999999, // 设置一个很大的数值来获取所有订单
+          exportAll: true // 标识这是导出请求
+        }
+      })
+      
+      if (response && response.success) {
+        ordersToExport = (response.data?.orders || response.data || []).map(order => ({
+          ...order,
+          _id: order._id || order.id,
+          orderNumber: order.orderNumber || `WS${Date.now()}${Math.random().toString(36).substr(2, 4)}`,
+          totalPrice: order.totalPrice || 0,
+          status: order.status || 'pending_payment',
+          paymentMethod: order.paymentMethod || '',
+          createdAt: order.createdAt || new Date().toISOString()
+        }))
+        
+        if (ordersToExport.length === 0) {
+          ElMessage.warning('系统中暂无订单数据')
+          return
+        }
+        
+        ElMessage.success(`获取到 ${ordersToExport.length} 条订单数据，开始导出...`)
+      } else {
+        ElMessage.error('获取订单数据失败')
+        return
+      }
+    } catch (error) {
+      console.error('获取全部订单数据失败:', error)
+      ElMessage.error('获取订单数据失败')
+      return
+    }
+  }
+  
+  // 构建CSV内容 - 包含订单详细信息但不包含商品信息
+  const headers = [
+    '订单号', '下单账号', '收货人', '联系电话', '配送地址', 
+    '订单金额', '下单时间', '订单状态', '支付方式', '支付状态', '配送状态'
+  ]
+  
+  const csvContent = [
+    headers.join(','),
+    ...ordersToExport.map(order => [
+      order.orderNumber || '',
+      getUserName(order),
+      getCustomerName(order),
+      getCustomerPhone(order),
+      getFullAddress(order.shippingAddress),
+      (order.totalPrice || 0).toFixed(2),
+      formatTime(order.createdAt),
+      getStatusText(order.status),
+      getPaymentMethodText(order.paymentMethod),
+      order.isPaid ? '已支付' : '未支付',
+      order.isDelivered ? '已配送' : '未配送'
+    ].join(','))
+  ].join('\n')
+  
+  // 下载CSV文件
+  const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  const exportType = hasFilters ? '筛选订单数据' : '全部订单数据'
+  link.download = `${exportType}_${new Date().toISOString().slice(0, 10)}.csv`
+  link.click()
+  
+  ElMessage.success(`已导出 ${ordersToExport.length} 条订单数据`)
 }
 
 // 获取下单账号名
