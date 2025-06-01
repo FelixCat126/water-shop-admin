@@ -290,7 +290,7 @@
         >
           <template #default="scope">
             <div class="user-info">
-              <el-avatar :src="scope.row.avatar" :size="32" class="user-avatar">
+              <el-avatar :src="getUserAvatarUrl(scope.row.avatar)" :size="32" class="user-avatar">
                 <el-icon><User /></el-icon>
               </el-avatar>
               <el-tooltip :content="scope.row.username" placement="top" :disabled="!scope.row.username || scope.row.username.length <= 12">
@@ -615,6 +615,35 @@ const visibleColumns = ref([
   '_id', 'username', 'nickName', 'phone', 
   'gender', 'memberLevel', 'totalConsumption', 'isActive'
 ])
+
+// 处理用户头像URL
+const getUserAvatarUrl = (avatar) => {
+  if (!avatar) return ''
+  
+  // 如果是完整的HTTP/HTTPS URL，直接返回
+  if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
+    return avatar
+  }
+  
+  // 获取后端服务器地址（去掉/api部分）
+  let baseUrl = import.meta.env.VITE_API_BASE_URL
+  
+  // 如果环境变量获取失败，使用默认值
+  if (!baseUrl) {
+    baseUrl = 'http://localhost:5001/api'
+  }
+  
+  // 去掉末尾的/api
+  baseUrl = baseUrl.replace('/api', '')
+  
+  // 如果是以/开头的绝对路径，直接拼接
+  if (avatar.startsWith('/')) {
+    return `${baseUrl}${avatar}`
+  }
+  
+  // 如果是相对路径，在前面加上/
+  return `${baseUrl}/${avatar}`
+}
 
 // 获取用户列表
 const fetchUsers = async () => {

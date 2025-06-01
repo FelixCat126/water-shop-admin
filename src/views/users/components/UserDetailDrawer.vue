@@ -23,7 +23,7 @@
           
           <div class="user-basic-info">
             <div class="user-avatar-section">
-              <el-avatar :src="userDetail.avatar" :size="80" class="large-avatar">
+              <el-avatar :src="userAvatarUrl" :size="80" class="large-avatar">
                 <el-icon size="40"><User /></el-icon>
               </el-avatar>
               <div class="user-status">
@@ -51,7 +51,13 @@
                   {{ userDetail.phone || '未设置' }}
                 </el-descriptions-item>
                 <el-descriptions-item label="性别">
-                  {{ userDetail.gender || '未知' }}
+                  {{ formatGender(userDetail.gender) }}
+                </el-descriptions-item>
+                <el-descriptions-item label="生日">
+                  {{ formatBirthday(userDetail.birthday) }}
+                </el-descriptions-item>
+                <el-descriptions-item label="邮箱">
+                  {{ userDetail.email || '未设置' }}
                 </el-descriptions-item>
                 <el-descriptions-item label="积分">
                   {{ userDetail.points || 0 }}
@@ -411,6 +417,45 @@ const paginatedOrders = computed(() => {
   return orders.slice(start, end)
 })
 
+// 计算属性 - 用户头像URL
+const userAvatarUrl = computed(() => {
+  if (!userDetail.value.avatar) return ''
+  
+  console.log('原始头像URL:', userDetail.value.avatar)
+  
+  // 如果是完整的HTTP/HTTPS URL，直接返回
+  if (userDetail.value.avatar.startsWith('http://') || userDetail.value.avatar.startsWith('https://')) {
+    console.log('完整URL，直接返回:', userDetail.value.avatar)
+    return userDetail.value.avatar
+  }
+  
+  // 获取后端服务器地址（去掉/api部分）
+  let baseUrl = import.meta.env.VITE_API_BASE_URL
+  console.log('环境变量 VITE_API_BASE_URL:', baseUrl)
+  
+  // 如果环境变量获取失败，使用默认值
+  if (!baseUrl) {
+    baseUrl = 'http://localhost:5001/api'
+    console.log('环境变量获取失败，使用默认值:', baseUrl)
+  }
+  
+  // 去掉末尾的/api
+  baseUrl = baseUrl.replace('/api', '')
+  console.log('处理后的 Base URL:', baseUrl)
+  
+  // 如果是以/开头的绝对路径，直接拼接
+  if (userDetail.value.avatar.startsWith('/')) {
+    const finalUrl = `${baseUrl}${userDetail.value.avatar}`
+    console.log('绝对路径，最终URL:', finalUrl)
+    return finalUrl
+  }
+  
+  // 如果是相对路径，在前面加上/
+  const finalUrl = `${baseUrl}/${userDetail.value.avatar}`
+  console.log('相对路径，最终URL:', finalUrl)
+  return finalUrl
+})
+
 // 获取用户详情
 const fetchUserDetail = async () => {
   if (!props.userId) return
@@ -420,6 +465,11 @@ const fetchUserDetail = async () => {
     const response = await getUserDetail(props.userId)
     if (response.success) {
       userDetail.value = response.data
+      
+      // 添加调试信息
+      console.log('获取的用户详情数据:', response.data)
+      console.log('用户头像:', response.data.avatar)
+      console.log('用户性别:', response.data.gender)
       
       // 如果传递了最新的用户数据，使用最新的状态信息
       if (props.userData) {
@@ -497,6 +547,22 @@ const formatDate = (date) => {
     hour: '2-digit',
     minute: '2-digit'
   })
+}
+
+// 格式化性别
+const formatGender = (gender) => {
+  // 处理中文性别值（后端存储的实际值）
+  if (gender === '男' || gender === '女' || gender === '未知') {
+    return gender
+  }
+  
+  // 兼容英文性别值（以防万一）
+  const genderMap = {
+    'male': '男',
+    'female': '女', 
+    'unknown': '未知'
+  }
+  return genderMap[gender] || '未设置'
 }
 
 // 获取订单状态类型
@@ -609,6 +675,26 @@ const couponStats = computed(() => {
   
   return { total, used, expired, available }
 })
+
+// 格式化生日
+const formatBirthday = (birthday) => {
+  if (!birthday) return '未设置'
+  
+  try {
+    const date = new Date(birthday)
+    // 检查是否为有效日期
+    if (isNaN(date.getTime())) return '未设置'
+    
+    return date.toLocaleDateString('zh-CN', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    })
+  } catch (error) {
+    console.error('生日格式化错误:', error)
+    return '未设置'
+  }
+}
 
 // 组件挂载后执行
 onMounted(() => {

@@ -21,9 +21,7 @@ export default defineConfig({
     }
   },
   define: {
-    'process.env': {
-      VITE_API_URL: 'http://localhost:5001/api',
-      VITE_API_BASE_URL: 'http://localhost:5001/api'
-    }
+    'import.meta.env.VITE_API_BASE_URL': JSON.stringify('http://localhost:5001/api'),
+    'import.meta.env.VITE_API_URL': JSON.stringify('http://localhost:5001/api')
   }
 })
