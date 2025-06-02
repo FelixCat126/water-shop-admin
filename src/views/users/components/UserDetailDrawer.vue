@@ -277,9 +277,9 @@
                   {{ scope.row.coupon?.description || '无描述' }}
                 </template>
               </el-table-column>
-              <el-table-column prop="coupon.value" label="优惠金额" width="120" align="center">
+              <el-table-column prop="coupon.value" label="优惠额度" width="120" align="center">
                 <template #default="scope">
-                  {{ scope.row.coupon?.type === 'amount' ? `¥${scope.row.coupon.value}` : `${scope.row.coupon?.value}折` }}
+                  {{ formatCouponValue(scope.row.coupon) }}
                 </template>
               </el-table-column>
               <el-table-column prop="status" label="状态" width="100" align="center">
@@ -292,10 +292,10 @@
                   </el-tag>
                 </template>
               </el-table-column>
-              <el-table-column prop="coupon.expirationDate" label="有效期" width="140" align="center">
+              <el-table-column prop="coupon.endDate" label="有效期" width="140" align="center">
                 <template #default="scope">
-                  <span v-if="scope.row.coupon?.expirationDate">
-                    {{ formatDate(scope.row.coupon.expirationDate) }}
+                  <span v-if="scope.row.coupon?.endDate">
+                    {{ formatDate(scope.row.coupon.endDate) }}
                   </span>
                   <span v-else style="color: #67C23A; font-weight: 500;">永久有效</span>
                 </template>
@@ -617,10 +617,31 @@ const handleDistributeCoupon = () => {
   })
 }
 
+// 格式化优惠券价值
+const formatCouponValue = (coupon) => {
+  if (!coupon) return '未知'
+  
+  if (coupon.type === 'percentage' || coupon.frontendType === 'percentage') {
+    return `${coupon.discountValue || coupon.amount}%折扣`
+  } else if (coupon.type === 'discount' || coupon.frontendType === 'discount') {
+    return `减${coupon.discountValue || coupon.amount}元`
+  } else if (coupon.type === 'free' || coupon.frontendType === 'free') {
+    return `抵扣${coupon.discountValue || coupon.amount}元`
+  }
+  
+  if (coupon.type === 'amount') {
+    return `¥${coupon.value}`
+  } else if (coupon.value) {
+    return `${coupon.value}折`
+  }
+  
+  return '未知优惠'
+}
+
 // 检查优惠券是否过期
 const isCouponExpired = (coupon) => {
-  if (!coupon?.expirationDate) return false
-  return new Date(coupon.expirationDate) < new Date()
+  if (!coupon?.endDate) return false
+  return new Date(coupon.endDate) < new Date()
 }
 
 // 获取优惠券状态类型

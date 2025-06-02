@@ -217,14 +217,21 @@ const fetchCoupons = async () => {
       }
       
       // 过滤可用的优惠券
+      const now = new Date()
       availableCoupons.value = allCoupons.filter(coupon => {
-        if (!coupon.totalCount) return true // 无限制优惠券
+        // 过滤已过期的优惠券
+        if (coupon.endDate && new Date(coupon.endDate) <= now) {
+          return false
+        }
+        
+        // 原有的数量过滤逻辑保持不变
+        if (!coupon.totalCount) return true
         
         const remaining = coupon.totalCount - coupon.usedCount
         if (props.targetUsers.length === 1) {
-          return remaining > 0 // 单人分发只需要有剩余即可
+          return remaining > 0
         } else {
-          return remaining >= props.targetUsers.length // 多人分发需要至少每人1张
+          return remaining >= props.targetUsers.length
         }
       })
       
