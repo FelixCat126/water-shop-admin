@@ -257,7 +257,7 @@
               <div class="stat-label">已使用</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">{{ (selectedCouponData.totalCount || 0) - (selectedCouponData.usedCount || 0) }}</div>
+              <div class="stat-value">{{ selectedCouponData.totalCount ? (selectedCouponData.totalCount - (selectedCouponData.usedCount || 0)) : "∞" }}</div>
               <div class="stat-label">剩余数量</div>
             </div>
             <div class="stat-item">
@@ -535,9 +535,9 @@ const couponForm = reactive({
   code: '',
   description: '',
   type: 'discount',
-  discountValue: '',
-  minOrderAmount: '',
-  totalCount: '',
+  discountValue: 0,
+  minOrderAmount: 0,
+  totalCount: 0,
   dateRange: [],
   isActive: true
 })
@@ -799,14 +799,14 @@ const handleAdd = () => {
 const handleEdit = (row) => {
   isEdit.value = true
   Object.assign(couponForm, {
-    id: row.id,
+    id: row._id,
     name: row.name,
     code: row.code,
     description: row.description,
     type: row.type,
-    discountValue: row.discountValue?.toString() || '',
-    minOrderAmount: row.minOrderAmount?.toString() || '',
-    totalCount: row.totalCount?.toString() || '',
+    discountValue: Number(row.discountValue) || 0,
+    minOrderAmount: Number(row.minOrderAmount) || 0,
+    totalCount: Number(row.totalCount) || 0,
     isActive: row.isActive
   })
   // 转换UTC时间为本地时间字符串
@@ -831,7 +831,7 @@ const handleDelete = async (row) => {
     )
     
     // 调用删除API
-    await deleteCoupon(row.id)
+    await deleteCoupon(row._id)
     ElMessage.success('删除成功')
     fetchCouponList()
   } catch (error) {
@@ -872,9 +872,9 @@ const resetForm = () => {
     code: '',
     description: '',
     type: 'discount',
-    discountValue: '',
-    minOrderAmount: '',
-    totalCount: '',
+    discountValue: 0,
+    minOrderAmount: 0,
+    totalCount: 0,
     dateRange: [],
     isActive: true
   })
