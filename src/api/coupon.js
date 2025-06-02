@@ -76,4 +76,31 @@ export function updateCouponStatus(id, isActive) {
     method: 'put',
     data: { isActive }
   })
+}
+
+/**
+ * 分发优惠券
+ * @param {Object} data - 分发数据
+ * @returns {Promise<Object>} - 返回分发结果
+ */
+export function distributeCoupons(data) {
+  return request({
+    url: '/admin/coupons/distribute',
+    method: 'post',
+    data
+  })
+}
+
+/**
+ * 获取用户优惠券列表
+ * @param {string|number} userId - 用户ID
+ * @param {Object} params - 查询参数
+ * @returns {Promise<Object>} - 返回用户优惠券列表
+ */
+export function getUserCoupons(userId, params = {}) {
+  return request({
+    url: `/admin/users/${userId}/coupons`,
+    method: 'get',
+    params
+  })
 } 

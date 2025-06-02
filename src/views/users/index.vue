@@ -452,7 +452,7 @@
         <!-- 操作列 -->
         <el-table-column
           label="操作"
-          width="180"
+          width="220"
           fixed="right"
           align="center"
         >
@@ -464,6 +464,16 @@
                 @click="handleViewDetail(scope.row)"
               >
                 详情
+              </el-button>
+            </el-tooltip>
+            
+            <el-tooltip content="分发优惠券" placement="top">
+              <el-button 
+                link 
+                type="success"
+                @click="handleDistributeCoupon(scope.row)"
+              >
+                优惠券
               </el-button>
             </el-tooltip>
             
@@ -522,6 +532,14 @@
       :user-id="selectedUserId"
       :user-data="selectedUserData"
       @refresh="fetchUsers"
+      @distribute-coupon="handleDistributeCouponFromDetail"
+    />
+    
+    <!-- 优惠券分发弹窗 -->
+    <coupon-distribute-dialog
+      v-model="distributionDialogVisible"
+      :target-users="targetUsers"
+      @success="handleDistributionSuccess"
     />
   </div>
 </template>
@@ -535,6 +553,8 @@ import {
 } from '@element-plus/icons-vue'
 import { getUsers, deleteUser, deleteUsers, getUserDetail } from '@/api/user'
 import UserDetailDrawer from './components/UserDetailDrawer.vue'
+import { useRouter } from 'vue-router'
+import CouponDistributeDialog from '@/components/CouponDistributeDialog.vue'
 
 // 响应式数据
 const loading = ref(false)
@@ -547,6 +567,9 @@ const selectedUserId = ref('')
 const selectedUserData = ref(null)
 const userTable = ref(null)  // 添加表格引用
 const advancedFilterVisible = ref(false)  // 高级筛选抽屉显示状态
+
+// 在setup函数中添加
+const router = useRouter()
 
 // 计算表格高度
 const tableHeight = computed(() => {
@@ -821,18 +844,24 @@ const handleBatchExport = () => {
     return
   }
   
-  // 构建CSV内容
-  const headers = ['用户ID', '用户名', '昵称', '手机号', '性别', '积分', '注册时间']
+  // 构建CSV内容 - 包含详细信息
+  const headers = ['用户ID', '用户名', '昵称', '手机号', '邮箱', '性别', '生日', '积分', '会员等级', '总消费金额', '注册时间', '最后登录', '账户状态']
   const csvContent = [
     headers.join(','),
     ...selectedUsers.value.map(user => [
       user._id,
-      user.username,
-      user.nickName || '',
-      user.phone || '',
-      user.gender || '',
+      user.username || '',
+      user.nickName || '未设置',
+      user.phone || '未设置',
+      user.email || '未设置', 
+      user.gender || '未知',
+      user.birthday ? formatDate(user.birthday) : '未设置',
       user.points || 0,
-      formatDate(user.createdAt)
+      getMemberLevel(user.points),
+      (user.totalConsumption || 0).toFixed(2),
+      formatDate(user.createdAt),
+      user.lastLogin ? formatDate(user.lastLogin) : '从未登录',
+      user.isActive ? '激活' : '禁用'
     ].join(','))
   ].join('\n')
   
@@ -840,10 +869,10 @@ const handleBatchExport = () => {
   const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = `用户数据_${new Date().toISOString().slice(0, 10)}.csv`
+  link.download = `用户详细数据_${new Date().toISOString().slice(0, 10)}.csv`
   link.click()
   
-  ElMessage.success(`已导出 ${selectedUsers.value.length} 个用户数据`)
+  ElMessage.success(`已导出 ${selectedUsers.value.length} 个用户的详细数据`)
 }
 
 // 批量分发优惠券
@@ -853,9 +882,16 @@ const handleBatchDistributeCoupon = () => {
     return
   }
   
-  ElMessage.info(`将为 ${selectedUsers.value.length} 个用户分发优惠券（功能开发中）`)
-  // TODO: 实现批量分发优惠券逻辑
-  // 可以打开一个对话框选择要分发的优惠券类型和数量
+  // 设置目标用户并显示弹窗
+  targetUsers.value = selectedUsers.value
+  distributionDialogVisible.value = true
+}
+
+// 单个用户分发优惠券
+const handleDistributeCoupon = (user) => {
+  // 设置目标用户并显示弹窗
+  targetUsers.value = [user]
+  distributionDialogVisible.value = true
 }
 
 // 状态变化
@@ -1064,6 +1100,28 @@ onUnmounted(() => {
     delete window.searchTimeout
   }
 })
+
+// 优惠券分发相关
+const distributionDialogVisible = ref(false)
+const targetUsers = ref([])
+
+// 分发成功回调
+const handleDistributionSuccess = () => {
+  // 清空选中的用户
+  selectedUsers.value = []
+  // 刷新用户列表
+  fetchUsers()
+}
+
+// 处理来自详情页的分发优惠券事件
+const handleDistributeCouponFromDetail = (eventData) => {
+  // 找到对应用户
+  const user = users.value.find(u => u._id === eventData.userId)
+  if (user) {
+    targetUsers.value = [user]
+    distributionDialogVisible.value = true
+  }
+}
 </script>
 
 <style scoped>

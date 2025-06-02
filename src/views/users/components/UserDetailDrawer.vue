@@ -388,7 +388,7 @@ const props = defineProps({
 })
 
 // Emits
-const emit = defineEmits(['update:modelValue', 'refresh'])
+const emit = defineEmits(['update:modelValue', 'refresh', 'distribute-coupon'])
 
 // 响应式数据
 const loading = ref(false)
@@ -417,43 +417,23 @@ const paginatedOrders = computed(() => {
   return orders.slice(start, end)
 })
 
-// 计算属性 - 用户头像URL
+// 计算属性 - 用户头像URL（简化版本）
 const userAvatarUrl = computed(() => {
-  if (!userDetail.value.avatar) return ''
+  const avatar = userDetail.value?.avatar
+  console.log('原始头像:', avatar)
   
-  console.log('原始头像URL:', userDetail.value.avatar)
+  if (!avatar) return ''
   
-  // 如果是完整的HTTP/HTTPS URL，直接返回
-  if (userDetail.value.avatar.startsWith('http://') || userDetail.value.avatar.startsWith('https://')) {
-    console.log('完整URL，直接返回:', userDetail.value.avatar)
-    return userDetail.value.avatar
+  // 如果是完整URL，直接返回
+  if (avatar.startsWith('http')) {
+    console.log('完整URL:', avatar)
+    return avatar
   }
   
-  // 获取后端服务器地址（去掉/api部分）
-  let baseUrl = import.meta.env.VITE_API_BASE_URL
-  console.log('环境变量 VITE_API_BASE_URL:', baseUrl)
-  
-  // 如果环境变量获取失败，使用默认值
-  if (!baseUrl) {
-    baseUrl = 'http://localhost:5001/api'
-    console.log('环境变量获取失败，使用默认值:', baseUrl)
-  }
-  
-  // 去掉末尾的/api
-  baseUrl = baseUrl.replace('/api', '')
-  console.log('处理后的 Base URL:', baseUrl)
-  
-  // 如果是以/开头的绝对路径，直接拼接
-  if (userDetail.value.avatar.startsWith('/')) {
-    const finalUrl = `${baseUrl}${userDetail.value.avatar}`
-    console.log('绝对路径，最终URL:', finalUrl)
-    return finalUrl
-  }
-  
-  // 如果是相对路径，在前面加上/
-  const finalUrl = `${baseUrl}/${userDetail.value.avatar}`
-  console.log('相对路径，最终URL:', finalUrl)
-  return finalUrl
+  // 否则使用localhost:5001拼接
+  const result = `http://localhost:5001${avatar.startsWith('/') ? avatar : '/' + avatar}`
+  console.log('拼接结果:', result)
+  return result
 })
 
 // 获取用户详情
@@ -465,11 +445,11 @@ const fetchUserDetail = async () => {
     const response = await getUserDetail(props.userId)
     if (response.success) {
       userDetail.value = response.data
-      
-      // 添加调试信息
-      console.log('获取的用户详情数据:', response.data)
-      console.log('用户头像:', response.data.avatar)
-      console.log('用户性别:', response.data.gender)
+      console.log('==== 用户详情调试信息 ====')
+      console.log('完整用户数据:', userDetail.value)
+      console.log('原始头像字段:', userDetail.value.avatar)
+      console.log('头像字段类型:', typeof userDetail.value.avatar)
+      console.log('==========================')
       
       // 如果传递了最新的用户数据，使用最新的状态信息
       if (props.userData) {
@@ -629,9 +609,12 @@ const handleExpandChange = (row) => {
 
 // 处理分发优惠券
 const handleDistributeCoupon = () => {
-  ElMessage.info(`为用户 "${userDetail.value.username}" 分发优惠券（功能开发中）`)
-  // TODO: 实现分发优惠券逻辑
-  // 可以打开一个对话框选择要分发的优惠券类型和数量
+  // 触发分发优惠券事件，传递用户信息
+  emit('distribute-coupon', {
+    userId: userDetail.value._id,
+    username: userDetail.value.username,
+    type: 'single'
+  })
 }
 
 // 检查优惠券是否过期
