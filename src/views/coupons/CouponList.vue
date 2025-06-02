@@ -348,11 +348,23 @@
                 </el-col>
                 <el-col :span="12">
                   <el-form-item label="优惠券代码" prop="code">
-                    <el-input v-model="couponForm.code" placeholder="请输入优惠券代码">
+                    <el-input 
+                      v-model="couponForm.code" 
+                      placeholder="请输入优惠券代码"
+                      @input="handleCodeInput"
+                      @blur="handleCodeBlur"
+                    >
                       <template #append>
                         <el-button @click="generateCode" type="primary">生成</el-button>
                       </template>
                     </el-input>
+                    <div v-if="codeCheckMessage" class="code-check-message" :class="codeCheckStatus">
+                      <el-icon v-if="codeCheckStatus === 'checking'"><Loading /></el-icon>
+                      <el-icon v-else-if="codeCheckStatus === 'available'" style="color: #67C23A;"><CircleCheckFilled /></el-icon>
+                      <el-icon v-else-if="codeCheckStatus === 'exists'" style="color: #F56C6C;"><CircleCloseFilled /></el-icon>
+                      <el-icon v-else-if="codeCheckStatus === 'error'" style="color: #E6A23C;"><WarningFilled /></el-icon>
+                      <span>{{ codeCheckMessage }}</span>
+                    </div>
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -502,8 +514,8 @@
 <script setup>
 import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Search, RefreshLeft, Refresh, Plus, QuestionFilled, Ticket, Money, Calendar } from '@element-plus/icons-vue'
-import { getCoupons, createCoupon, updateCoupon, deleteCoupon, updateCouponStatus } from '@/api/coupon'
+import { Search, RefreshLeft, Refresh, Plus, QuestionFilled, Ticket, Money, Calendar, Loading, CircleCheckFilled, CircleCloseFilled, WarningFilled } from '@element-plus/icons-vue'
+import { getCoupons, createCoupon, updateCoupon, deleteCoupon, updateCouponStatus, checkCouponCode } from '@/api/coupon'
 
 const loading = ref(false)
 const submitting = ref(false)
@@ -514,6 +526,10 @@ const selectedCouponData = ref(null)
 const formDialogVisible = ref(false)
 const isEdit = ref(false)
 const couponFormRef = ref(null)
+// 代码检测相关状态
+const codeCheckStatus = ref('') // 'checking', 'available', 'exists', 'error'
+const codeCheckMessage = ref('')
+const codeCheckTimer = ref(null)
 
 // 搜索表单
 const searchForm = reactive({
@@ -548,7 +564,17 @@ const formRules = {
     { required: true, message: '请输入优惠券名称', trigger: 'blur' }
   ],
   code: [
-    { required: true, message: '请输入优惠券代码', trigger: 'blur' }
+    { required: true, message: '请输入优惠券代码', trigger: 'blur' },
+    { 
+      validator: (rule, value, callback) => {
+        if (codeCheckStatus.value === 'exists') {
+          callback(new Error('优惠券代码已存在'))
+        } else {
+          callback()
+        }
+      }, 
+      trigger: 'blur' 
+    }
   ],
   type: [
     { required: true, message: '请选择优惠券类型', trigger: 'change' }
@@ -837,7 +863,7 @@ const handleDelete = async (row) => {
   } catch (error) {
     if (error !== 'cancel') {
       console.error('删除优惠券失败:', error)
-      ElMessage.error('删除优惠券失败: ' + (error.response?.data?.message || error.message || '未知错误'))
+      // 错误已在axios拦截器中处理
     }
   }
 }
@@ -849,19 +875,89 @@ const handleStatusChange = async (row, value) => {
     ElMessage.success(`优惠券已${value ? '启用' : '禁用'}`)
   } catch (error) {
     console.error('更新优惠券状态失败', error)
-    ElMessage.error('更新优惠券状态失败')
+    // 错误已在axios拦截器中处理
     row.isActive = !value
+  }
+}
+
+// 处理代码输入事件
+const handleCodeInput = (value) => {
+  // 清除之前的定时器
+  if (codeCheckTimer.value) {
+    clearTimeout(codeCheckTimer.value)
+  }
+  
+  // 清空之前的检查状态
+  codeCheckStatus.value = ''
+  codeCheckMessage.value = ''
+  
+  // 如果是编辑模式且代码没有改变，不需要检查
+  if (isEdit.value && value === couponForm.code) {
+    return
+  }
+  
+  // 如果代码为空或太短，不检查
+  if (!value || value.length < 2) {
+    return
+  }
+  
+  // 设置防抖检查
+  codeCheckTimer.value = setTimeout(() => {
+    checkCodeAvailability(value)
+  }, 500) // 500ms防抖
+}
+
+// 处理代码失焦事件
+const handleCodeBlur = () => {
+  const value = couponForm.code
+  
+  // 如果有值且还没检查过，立即检查
+  if (value && value.length >= 2 && !codeCheckStatus.value) {
+    checkCodeAvailability(value)
+  }
+}
+
+// 检查代码可用性
+const checkCodeAvailability = async (code) => {
+  if (!code) return
+  
+  try {
+    codeCheckStatus.value = 'checking'
+    codeCheckMessage.value = '检查中...'
+    
+    const response = await checkCouponCode(code)
+    
+    if (response && response.success) {
+      if (response.data.exists) {
+        codeCheckStatus.value = 'exists'
+        codeCheckMessage.value = '代码已存在，请换一个'
+      } else {
+        codeCheckStatus.value = 'available'
+        codeCheckMessage.value = '代码可用'
+      }
+    } else {
+      throw new Error(response?.message || '检查失败')
+    }
+  } catch (error) {
+    console.error('检查优惠券代码失败:', error)
+    codeCheckStatus.value = 'error'
+    codeCheckMessage.value = '检查失败，请稍后重试'
   }
 }
 
 // 生成优惠券代码
 const generateCode = () => {
+  // 清除之前的检测状态
+  codeCheckStatus.value = ""
+  codeCheckMessage.value = ""
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
   let result = ''
   for (let i = 0; i < 8; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
   couponForm.code = result
+  // 生成后立即检测代码可用性
+  checkCodeAvailability(result)
 }
 
 // 重置表单
@@ -878,6 +974,13 @@ const resetForm = () => {
     dateRange: [],
     isActive: true
   })
+  
+  // 重置代码检测状态
+  codeCheckStatus.value = ''
+  codeCheckMessage.value = ''
+  if (codeCheckTimer.value) {
+    clearTimeout(codeCheckTimer.value)
+  }
 }
 
 // 提交表单
@@ -885,8 +988,19 @@ const handleSubmit = async () => {
   try {
     await couponFormRef.value.validate()
     
+    // 检查代码重复状态
+    if (codeCheckStatus.value === "exists" || codeCheckStatus.value === "error") {
+      // 错误已在axios拦截器中处理
+      return
+    }
+    
+    if (codeCheckStatus.value === "checking") {
+      // 错误已在axios拦截器中处理
+      return
+    }
+    
     if (!couponForm.dateRange || couponForm.dateRange.length !== 2) {
-      ElMessage.error('请选择有效期')
+      // 错误已在axios拦截器中处理
       return
     }
     
@@ -920,7 +1034,7 @@ const handleSubmit = async () => {
     fetchCouponList()
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error('提交失败: ' + (error.response?.data?.message || error.message || '未知错误'))
+    // 错误已在axios拦截器中处理
   } finally {
     submitting.value = false
   }
@@ -1330,5 +1444,35 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   justify-content: flex-end;
+}
+
+/* 代码检测消息样式 */
+.code-check-message {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.code-check-message.checking {
+  color: #409EFF;
+}
+
+.code-check-message.available {
+  color: #67C23A;
+}
+
+.code-check-message.exists {
+  color: #F56C6C;
+}
+
+.code-check-message.error {
+  color: #E6A23C;
+}
+
+.code-check-message .el-icon {
+  font-size: 14px;
 }
 </style> 

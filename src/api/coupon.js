@@ -104,3 +104,17 @@ export function getUserCoupons(userId, params = {}) {
     params
   })
 } 
+
+
+/**
+ * 检查优惠券代码是否重复
+ * @param {string} code - 优惠券代码
+ * @returns {Promise<Object>} - 返回检查结果
+ */
+export function checkCouponCode(code) {
+  return request({
+    url: '/admin/coupons/check-code',
+    method: 'get',
+    params: { code }
+  })
+}
