@@ -1262,12 +1262,13 @@ onUnmounted(() => {
 }
 
 /* 对话框样式 */
-.image-uploader .image {
+.content-list-container .image-uploader .image {
   width: 240px;
   height: 135px;
   display: block;
   object-fit: cover;
   border-radius: 4px;
+  border: 1px solid #dcdfe6 !important;
 }
 
 .image-uploader .el-upload {
@@ -1300,7 +1301,7 @@ onUnmounted(() => {
 
 /* 富文本编辑器样式 */
 .rich-editor-wrapper {
-  border: 1px solid #dcdfe6;
+  border: 1px solid #dcdfe6 !important;
   border-radius: 4px;
   overflow: hidden;
 }

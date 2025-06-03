@@ -224,7 +224,7 @@
                 :page-sizes="[5, 10, 20, 50]"
                 :total="orderPagination.total"
                 layout="total, sizes, prev, pager, next, jumper"
-                small
+                size="small"
                 @size-change="handleOrderPageSizeChange"
                 @current-change="handleOrderPageChange"
               />
