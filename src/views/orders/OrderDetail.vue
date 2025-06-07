@@ -112,12 +112,18 @@
         >
           <div class="goods-image">
             <el-image 
-              :src="item.image" 
-              :preview-src-list="[item.image]"
+              :src="item.image || item.imageUrl || item.product?.imageUrl || '/static/images/products/default.jpg'" 
+              :preview-src-list="[item.image || item.imageUrl || item.product?.imageUrl || '/static/images/products/default.jpg']"
               style="width: 60px; height: 60px"
               fit="cover"
               lazy
-            />
+            >
+              <template #error>
+                <div style="display: flex; justify-content: center; align-items: center; width: 60px; height: 60px; background: #f5f7fa; color: #909399; font-size: 20px;">
+                  <el-icon><Picture /></el-icon>
+                </div>
+              </template>
+            </el-image>
           </div>
           <div class="goods-details">
             <div class="goods-name">{{ item.name }}</div>
@@ -139,12 +145,20 @@
           <span class="label">配送费：</span>
           <span class="value">¥{{ orderInfo.shippingFee ? orderInfo.shippingFee.toFixed(2) : '0.00' }}</span>
         </div>
-        <div class="amount-item" v-if="orderInfo.discount">
+        <div class="amount-item">
+          <span class="label">订单总金额：</span>
+          <span class="value">¥{{ orderInfo.originalAmount ? orderInfo.originalAmount.toFixed(2) : '0.00' }}</span>
+        </div>
+        <div class="amount-item" v-if="orderInfo.discount && orderInfo.discount > 0">
           <span class="label">优惠金额：</span>
           <span class="value discount">-¥{{ orderInfo.discount.toFixed(2) }}</span>
         </div>
+        <div class="amount-item" v-if="orderInfo.couponInfo">
+          <span class="label">使用优惠券：</span>
+          <span class="value coupon-name">{{ orderInfo.couponInfo.name }}</span>
+        </div>
         <div class="amount-item total">
-          <span class="label">订单总价：</span>
+          <span class="label">实付金额：</span>
           <span class="value total-amount">¥{{ orderInfo.totalAmount ? orderInfo.totalAmount.toFixed(2) : '0.00' }}</span>
         </div>
       </div>
@@ -297,6 +311,7 @@ const orderInfo = reactive({
   totalAmount: 0,
   itemsAmount: 0,
   shippingFee: 0,
+  originalAmount: 0, // 原价（商品总价 + 配送费）
   discount: 0,
   orderTime: '',
   paymentTime: '',
@@ -353,15 +368,25 @@ const fetchOrderDetail = async (id) => {
       console.log('📦 订单数据类型:', typeof order);
       console.log('📦 订单键值:', Object.keys(order || {}));
       console.log('🎯 原始状态值:', { status: order.status, type: typeof order.status });
-      console.log('⏰ 时间字段检查:', {
-        createdAt: order.createdAt,
-        paidAt: order.paidAt,
-        deliveredAt: order.deliveredAt,
-        completedAt: order.completedAt,
-        updatedAt: order.updatedAt,
-        finishedAt: order.finishedAt,
-        receivedAt: order.receivedAt
+      
+      console.log('');
+      console.log('🕐 ========== 详细时间字段分析 ==========');
+      const timeFields = ['createdAt', 'paidAt', 'deliveredAt', 'completedAt', 'updatedAt', 'finishedAt', 'receivedAt', 'canceledAt'];
+      timeFields.forEach(field => {
+        const value = order[field];
+        console.log(`⏰ ${field}:`);
+        console.log(`   原始值: ${value}`);
+        console.log(`   数据类型: ${typeof value}`);
+        console.log(`   是否为空: ${!value}`);
+        if (value) {
+          console.log(`   转换为Date: ${new Date(value)}`);
+          console.log(`   时间戳: ${new Date(value).getTime()}`);
+          console.log(`   是否有效日期: ${!isNaN(new Date(value).getTime())}`);
+        }
+        console.log('');
       });
+      console.log('🕐 ===================================');
+      console.log('');
       
       // 在赋值前记录状态
       console.log('🔄 开始赋值前orderInfo.status:', orderInfo.status);
@@ -373,10 +398,31 @@ const fetchOrderDetail = async (id) => {
         customerName: order.shippingAddress?.name || order.shippingAddress?.contactName || order.user?.username || '未知用户',
         phone: order.shippingAddress?.phone || '暂无电话',
         address: getFullAddress(order.shippingAddress),
-        totalAmount: order.totalPrice || 0,
+        totalAmount: order.totalPrice || 0, // 支付金额（最终金额）
         itemsAmount: order.itemsPrice || 0,
         shippingFee: order.shippingPrice || 0,
-        discount: 0,
+        originalAmount: (order.totalPrice || 0) + (order.discountAmount || 0), // 原价 = 支付金额 + 优惠金额
+        discount: order.discountAmount || 0, // 优惠金额
+        // 优惠券信息
+        couponInfo: (() => {
+          // 优先使用parsedCouponInfo
+          if (order.parsedCouponInfo) {
+            return {
+              name: order.parsedCouponInfo.name || '',
+              type: order.parsedCouponInfo.type || 'fixed',
+              value: order.parsedCouponInfo.value || 0
+            };
+          }
+          // 否则使用usedCoupon字段
+          if (order.usedCoupon && order.usedCoupon.coupon) {
+            return {
+              name: order.usedCoupon.coupon.name || '',
+              type: order.usedCoupon.coupon.type || 'fixed',
+              value: order.usedCoupon.coupon.value || 0
+            };
+          }
+          return null;
+        })(),
         orderTime: formatTime(order.createdAt),
         paymentTime: order.paidAt ? formatTime(order.paidAt) : '',
         status: order.status, // 移除默认值，直接使用API返回的状态
@@ -387,65 +433,111 @@ const fetchOrderDetail = async (id) => {
         items: (order.orderItems || []).map(item => ({
           id: item._id,
           name: item.name,
-          image: item.image || '/static/images/placeholder.jpg',
+          image: item.image || item.imageUrl || item.product?.imageUrl || '/static/images/products/default.jpg',
+          imageUrl: item.imageUrl || item.image || item.product?.imageUrl || '/static/images/products/default.jpg',
           price: item.price || 0,
           quantity: item.quantity || 1
         })),
         activities: (() => {
+          console.log('🎭 ========== 开始生成Activities ==========');
           const activities = []
           
           // 客户下单
-          activities.push({
+          console.log('👤 处理客户下单活动');
+          console.log('👤 创建时间原始值:', order.createdAt);
+          const createActivity = {
             type: 'create',
             content: '客户下单',
             time: formatTime(order.createdAt)
-          })
+          }
+          console.log('👤 生成的创建活动:', createActivity);
+          activities.push(createActivity)
           
           // 订单已支付
           if (order.paidAt) {
-            activities.push({
+            console.log('💰 处理订单支付活动');
+            console.log('💰 支付时间原始值:', order.paidAt);
+            const paymentActivity = {
               type: 'payment',
               content: '订单已支付',
               time: formatTime(order.paidAt)
-            })
+            }
+            console.log('💰 生成的支付活动:', paymentActivity);
+            activities.push(paymentActivity)
+          } else {
+            console.log('💰 无支付时间，跳过支付活动');
           }
           
           // 订单已发货
           if (order.deliveredAt) {
-            activities.push({
+            console.log('🚚 处理订单发货活动');
+            console.log('🚚 发货时间原始值:', order.deliveredAt);
+            const shippingActivity = {
               type: 'shipping',
               content: '订单已发货',
               time: formatTime(order.deliveredAt)
-            })
+            }
+            console.log('🚚 生成的发货活动:', shippingActivity);
+            activities.push(shippingActivity)
+          } else {
+            console.log('🚚 无发货时间，跳过发货活动');
           }
           
-          // 订单已完成 - 检查多种可能的字段名
+          // 订单已完成 - 只有在有明确完成时间时才显示
+          console.log('✅ 检查完成时间字段');
+          console.log('✅ completedAt:', order.completedAt);
+          console.log('✅ finishedAt:', order.finishedAt);
+          console.log('✅ receivedAt:', order.receivedAt);
+          
           const completedTime = order.completedAt || order.finishedAt || order.receivedAt
-          if (completedTime || order.status === 'completed') {
-            activities.push({
+          console.log('✅ 最终选择的完成时间:', completedTime);
+          
+          if (completedTime) {
+            console.log('✅ 处理订单完成活动');
+            const completeActivity = {
               type: 'complete',
               content: '订单已完成',
-              time: completedTime ? formatTime(completedTime) : formatTime(order.updatedAt || order.createdAt)
-            })
+              time: formatTime(completedTime)
+            }
+            console.log('✅ 生成的完成活动:', completeActivity);
+            activities.push(completeActivity)
+          } else {
+            console.log('✅ 无完成时间，跳过完成活动');
           }
           
           // 订单已取消
-          if (order.canceledAt || order.status === 'canceled') {
-            activities.push({
+          if (order.canceledAt) {
+            console.log('❌ 处理订单取消活动');
+            console.log('❌ 取消时间原始值:', order.canceledAt);
+            const cancelActivity = {
               type: 'cancel',
               content: '订单已取消',
-              time: order.canceledAt ? formatTime(order.canceledAt) : formatTime(order.updatedAt || order.createdAt)
-            })
+              time: formatTime(order.canceledAt)
+            }
+            console.log('❌ 生成的取消活动:', cancelActivity);
+            activities.push(cancelActivity)
+          } else {
+            console.log('❌ 无取消时间，跳过取消活动');
           }
           
           // 订单备注
           if (order.remark) {
-            activities.push({
+            console.log('📝 处理订单备注活动');
+            console.log('📝 备注内容:', order.remark);
+            console.log('📝 使用创建时间:', order.createdAt);
+            const remarkActivity = {
               type: 'remark',
               content: `备注: ${order.remark}`,
               time: formatTime(order.createdAt)
-            })
+            }
+            console.log('📝 生成的备注活动:', remarkActivity);
+            activities.push(remarkActivity)
+          } else {
+            console.log('📝 无备注，跳过备注活动');
           }
+          
+          console.log('🎭 最终生成的所有活动:', activities);
+          console.log('🎭 =======================================');
           
           return activities
         })()
@@ -490,17 +582,37 @@ const getFullAddress = (address) => {
   return `${province || ''}${city || ''}${district || ''}${detail || ''}`
 }
 
-// 格式化时间
+// 格式化时间 - 使用固定格式避免locale差异
 const formatTime = (time) => {
-  if (!time) return '-'
-  return new Date(time).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })
+  console.log('⏰ ========== formatTime调用 ==========');
+  console.log('📥 输入时间值:', time);
+  console.log('📥 输入时间类型:', typeof time);
+  console.log('📥 输入时间是否为空:', !time);
+  
+  if (!time) {
+    console.log('❌ 时间为空，返回 "-"');
+    console.log('⏰ ===================================');
+    return '-'
+  }
+  
+  const date = new Date(time)
+  console.log('📅 转换后的Date对象:', date);
+  console.log('📅 Date对象是否有效:', !isNaN(date.getTime()));
+  console.log('📅 时间戳:', date.getTime());
+  
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  const result = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  
+  console.log('📤 格式化结果:', result);
+  console.log('⏰ ===================================');
+  
+  return result
 }
 
 // 计算会员等级
@@ -625,12 +737,14 @@ const getStatusStep = (status) => {
 // 获取支付方式文本
 const getPaymentMethodText = (method) => {
   const methodMap = {
-    'cash': '现金',
-    'wechat': '微信',
+    '微信支付': '微信支付',
+    '货到付款': '货到付款',
+    'wechat': '微信支付',
     'alipay': '支付宝',
+    'cash': '现金',
     'card': '银行卡'
   }
-  return methodMap[method] || '-'
+  return methodMap[method] || method || '-'
 }
 
 // 获取活动类型
@@ -668,28 +782,35 @@ const handleConfirmPayment = () => {
 }
 
 // 确认付款
-const confirmPayment = () => {
+const confirmPayment = async () => {
   paymentLoading.value = true
-  // 实际应用中应该调用API更新数据
-  // await updateOrderStatus(orderInfo.id, 'pending_shipment', paymentForm)
   
-  // 模拟操作
-  setTimeout(() => {
-    orderInfo.status = 'pending_shipment' // 修复：使用正确的状态值
-    orderInfo.paymentMethod = paymentForm.paymentMethod
-    orderInfo.paymentTime = new Date().toLocaleString()
-    
-    // 添加活动记录
-    orderInfo.activities.unshift({
-      type: 'payment',
-      content: `确认收款，支付方式：${getPaymentMethodText(paymentForm.paymentMethod)}`,
-      time: orderInfo.paymentTime
+  try {
+    const response = await request({
+      url: `/admin/orders/${orderInfo.id}/pay`,
+      method: 'put',
+      data: {
+        id: paymentForm.transactionId || `admin_${Date.now()}`,
+        status: 'success',
+        updateTime: new Date(),
+        paymentMethod: paymentForm.paymentMethod
+      }
     })
     
-    paymentLoading.value = false
-    paymentDialogVisible.value = false
-    ElMessage.success('收款成功')
-  }, 500)
+    if (response && response.success) {
+      ElMessage.success('收款成功')
+      paymentDialogVisible.value = false
+      // 重新获取订单详情以更新显示
+      fetchOrderDetail(orderInfo.id)
+    } else {
+      ElMessage.error(response?.message || '确认收款失败')
+    }
+  } catch (error) {
+    console.error('确认收款失败:', error)
+    ElMessage.error('确认收款失败')
+  }
+  
+  paymentLoading.value = false
 }
 
 // 开始配送
@@ -703,34 +824,23 @@ const handleShip = () => {
       type: 'info'
     }
   ).then(async () => {
-    // 实际应用中应该调用API更新数据
-    // await updateOrderStatus(orderInfo.id, 'pending_receipt')
-    
-    // 模拟操作
-    const now = new Date().toLocaleString()
-    orderInfo.status = 'pending_receipt' // 修复：使用正确的状态值
-    orderInfo.deliveryStaff = '王师傅'
-    orderInfo.deliveryPhone = '13888888888'
-    orderInfo.estimatedDeliveryTime = '预计1小时内送达'
-    
-    // 添加追踪信息
-    if (!orderInfo.trackingInfo) {
-      orderInfo.trackingInfo = []
+    try {
+      const response = await request({
+        url: `/admin/orders/${orderInfo.id}/deliver`,
+        method: 'put'
+      })
+      
+      if (response && response.success) {
+        ElMessage.success('订单已标记为已发货')
+        // 重新获取订单详情以更新显示
+        fetchOrderDetail(orderInfo.id)
+      } else {
+        ElMessage.error(response?.message || '发货失败')
+      }
+    } catch (error) {
+      console.error('发货失败:', error)
+      ElMessage.error('发货失败')
     }
-    
-    orderInfo.trackingInfo.unshift({
-      content: '商品已出库，开始配送',
-      time: now
-    })
-    
-    // 添加活动记录
-    orderInfo.activities.unshift({
-      type: 'shipping',
-      content: '订单开始配送',
-      time: now
-    })
-    
-    ElMessage.success('操作成功，订单状态已更新为配送中')
   }).catch(() => {})
 }
 
@@ -745,31 +855,23 @@ const handleComplete = () => {
       type: 'info'
     }
   ).then(async () => {
-    // 实际应用中应该调用API更新数据
-    // await updateOrderStatus(orderInfo.id, 'completed')
-    
-    // 模拟操作
-    const now = new Date().toLocaleString()
-    orderInfo.status = 'completed'
-    
-    // 添加追踪信息
-    if (!orderInfo.trackingInfo) {
-      orderInfo.trackingInfo = []
+    try {
+      const response = await request({
+        url: `/admin/orders/${orderInfo.id}/complete`,
+        method: 'put'
+      })
+      
+      if (response && response.success) {
+        ElMessage.success('订单已标记为已完成')
+        // 重新获取订单详情以更新显示
+        fetchOrderDetail(orderInfo.id)
+      } else {
+        ElMessage.error(response?.message || '完成订单失败')
+      }
+    } catch (error) {
+      console.error('完成订单失败:', error)
+      ElMessage.error('完成订单失败')
     }
-    
-    orderInfo.trackingInfo.unshift({
-      content: '商品已送达，订单完成',
-      time: now
-    })
-    
-    // 添加活动记录
-    orderInfo.activities.unshift({
-      type: 'complete',
-      content: '订单已完成',
-      time: now
-    })
-    
-    ElMessage.success('操作成功，订单已完成')
   }).catch(() => {})
 }
 
@@ -784,21 +886,23 @@ const handleCancel = () => {
       type: 'warning'
     }
   ).then(async () => {
-    // 实际应用中应该调用API更新数据
-    // await updateOrderStatus(orderInfo.id, 'canceled')
-    
-    // 模拟操作
-    const now = new Date().toLocaleString()
-    orderInfo.status = 'canceled' // 修复：使用正确的状态值（canceled不是cancelled）
-    
-    // 添加活动记录
-    orderInfo.activities.unshift({
-      type: 'cancel',
-      content: '订单已取消',
-      time: now
-    })
-    
-    ElMessage.success('订单已取消')
+    try {
+      const response = await request({
+        url: `/admin/orders/${orderInfo.id}/cancel`,
+        method: 'put'
+      })
+      
+      if (response && response.success) {
+        ElMessage.success('订单已取消')
+        // 重新获取订单详情以更新显示
+        fetchOrderDetail(orderInfo.id)
+      } else {
+        ElMessage.error(response?.message || '取消订单失败')
+      }
+    } catch (error) {
+      console.error('取消订单失败:', error)
+      ElMessage.error('取消订单失败')
+    }
   }).catch(() => {})
 }
 
@@ -813,50 +917,61 @@ const handleRefund = () => {
       type: 'warning'
     }
   ).then(async () => {
-    // 实际应用中应该调用API更新数据
-    // await updateOrderStatus(orderInfo.id, 'refunded')
-    
-    // 模拟操作
-    const now = new Date().toLocaleString()
-    orderInfo.status = 'refunded'
-    
-    // 添加活动记录
-    orderInfo.activities.unshift({
-      type: 'refund',
-      content: '订单已退款',
-      time: now
-    })
-    
-    ElMessage.success('退款申请已提交')
+    try {
+      const response = await request({
+        url: `/admin/orders/${orderInfo.id}/status`,
+        method: 'put',
+        data: { status: 'refunded' }
+      })
+      
+      if (response && response.success) {
+        ElMessage.success('退款申请已提交')
+        // 重新获取订单详情以更新显示
+        fetchOrderDetail(orderInfo.id)
+      } else {
+        ElMessage.error(response?.message || '申请退款失败')
+      }
+    } catch (error) {
+      console.error('申请退款失败:', error)
+      ElMessage.error('申请退款失败')
+    }
   }).catch(() => {})
 }
 
 // 添加备注
-const handleAddRemark = () => {
+const handleAddRemark = async () => {
   if (!remarkForm.content.trim()) {
     ElMessage.warning('请输入备注内容')
     return
   }
   
   remarkLoading.value = true
-  // 实际应用中应该调用API添加备注
-  // await addOrderRemark(orderInfo.id, remarkForm.content)
   
-  // 模拟操作
-  setTimeout(() => {
-    const now = new Date().toLocaleString()
-    
-    // 添加活动记录
-    orderInfo.activities.unshift({
-      type: 'remark',
-      content: `备注: ${remarkForm.content}`,
-      time: now
+  try {
+    // 更新订单备注
+    const response = await request({
+      url: `/admin/orders/${orderInfo.id}/status`,
+      method: 'put',
+      data: { 
+        status: orderInfo.status, // 保持当前状态
+        remark: remarkForm.content 
+      }
     })
     
-    remarkForm.content = ''
-    remarkLoading.value = false
-    ElMessage.success('备注添加成功')
-  }, 500)
+    if (response && response.success) {
+      ElMessage.success('备注添加成功')
+      remarkForm.content = ''
+      // 重新获取订单详情以更新显示
+      fetchOrderDetail(orderInfo.id)
+    } else {
+      ElMessage.error(response?.message || '添加备注失败')
+    }
+  } catch (error) {
+    console.error('添加备注失败:', error)
+    ElMessage.error('添加备注失败')
+  }
+  
+  remarkLoading.value = false
 }
 
 // 重置订单信息
@@ -1149,4 +1264,4 @@ onMounted(() => {
 :deep(.el-button .el-icon + *) {
   margin-left: 4px;
 }
-</style> 
+</style>

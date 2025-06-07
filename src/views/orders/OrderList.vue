@@ -66,65 +66,71 @@
         style="width: 100%"
         :empty-text="loading ? '加载中...' : '暂无数据'"
         table-layout="fixed"
+        :scroll-x="true"
       >
-        <el-table-column prop="orderNumber" label="订单号" width="180" fixed="left">
+        <!-- 冻结首列：订单号 -->
+        <el-table-column prop="orderNumber" label="订单号" width="200" fixed="left">
           <template #default="scope">
             <el-tooltip :content="scope.row.orderNumber" placement="top">
               <span class="order-number-text">{{ scope.row.orderNumber }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="username" label="下单账号" width="120">
+        
+        <!-- 中间列：确保信息显示完整 -->
+        <el-table-column prop="username" label="下单账号" width="140">
           <template #default="scope">
             <el-tooltip :content="getUserName(scope.row)" placement="top">
               <span class="username-text">{{ getUserName(scope.row) }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="customerName" label="收货人" width="100">
+        <el-table-column prop="customerName" label="收货人" width="120">
           <template #default="scope">
             <el-tooltip :content="getCustomerName(scope.row)" placement="top">
               <span class="customer-name-text">{{ getCustomerName(scope.row) }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="customerPhone" label="联系电话" width="130">
+        <el-table-column prop="customerPhone" label="联系电话" width="140">
           <template #default="scope">
             <el-tooltip :content="getCustomerPhone(scope.row)" placement="top">
               <span class="phone-number-text">{{ getCustomerPhone(scope.row) }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="shippingAddress" label="配送地址" min-width="200" show-overflow-tooltip>
+        <el-table-column prop="shippingAddress" label="配送地址" width="280" show-overflow-tooltip>
           <template #default="scope">
-            {{ getFullAddress(scope.row.shippingAddress) }}
+            <div class="address-text">
+              {{ getFullAddress(scope.row.shippingAddress) }}
+            </div>
           </template>
         </el-table-column>
-        <el-table-column prop="totalPrice" label="订单金额" width="100" align="center">
+        <el-table-column prop="totalPrice" label="订单金额" width="120" align="center">
           <template #default="scope">
-            ¥{{ scope.row.totalPrice?.toFixed(2) || '0.00' }}
+            <span class="price-text">¥{{ scope.row.totalPrice?.toFixed(2) || '0.00' }}</span>
           </template>
         </el-table-column>
-        <el-table-column prop="createdAt" label="下单时间" width="160" align="center">
+        <el-table-column prop="createdAt" label="下单时间" width="180" align="center">
           <template #default="scope">
             <el-tooltip :content="formatTime(scope.row.createdAt)" placement="top">
               <span class="date-text">{{ formatTime(scope.row.createdAt) }}</span>
             </el-tooltip>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="订单状态" width="100" align="center">
+        <el-table-column prop="status" label="订单状态" width="110" align="center">
           <template #default="scope">
             <el-tag :type="getStatusType(scope.row.status)">
               {{ getStatusText(scope.row.status) }}
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="paymentMethod" label="支付方式" width="100" align="center">
+        <el-table-column prop="paymentMethod" label="支付方式" width="110" align="center">
           <template #default="scope">
-            {{ getPaymentMethodText(scope.row.paymentMethod) }}
+            <span class="payment-method-text">{{ getPaymentMethodText(scope.row.paymentMethod) }}</span>
           </template>
         </el-table-column>
-        <el-table-column label="商品信息" width="120" align="center">
+        <el-table-column label="商品信息" width="140" align="center">
           <template #default="scope">
             <el-popover
               placement="top"
@@ -167,22 +173,25 @@
             </el-popover>
           </template>
         </el-table-column>
-        <el-table-column label="操作" width="220" fixed="right" align="center">
+        <!-- 冻结尾列：操作 -->
+        <el-table-column label="操作" width="240" fixed="right" align="center">
           <template #default="scope">
-            <el-button link type="primary" @click="handleDetail(scope.row)">详情</el-button>
-            
-            <template v-if="scope.row.status === 'pending_payment'">
-              <el-button link type="warning" @click="handleConfirmPayment(scope.row)">确认付款</el-button>
-              <el-button link type="danger" @click="handleCancel(scope.row)">取消</el-button>
-            </template>
-            
-            <template v-if="scope.row.status === 'pending_shipment'">
-              <el-button link type="success" @click="handleDeliver(scope.row)">发货</el-button>
-            </template>
-            
-            <template v-if="scope.row.status === 'pending_receipt'">
-              <el-button link type="success" @click="handleComplete(scope.row)">完成订单</el-button>
-            </template>
+            <div class="action-buttons">
+              <el-button link type="primary" size="small" @click="handleDetail(scope.row)">详情</el-button>
+              
+              <template v-if="scope.row.status === 'pending_payment'">
+                <el-button link type="warning" size="small" @click="handleConfirmPayment(scope.row)">确认付款</el-button>
+                <el-button link type="danger" size="small" @click="handleCancel(scope.row)">取消</el-button>
+              </template>
+              
+              <template v-if="scope.row.status === 'pending_shipment'">
+                <el-button link type="success" size="small" @click="handleDeliver(scope.row)">发货</el-button>
+              </template>
+              
+              <template v-if="scope.row.status === 'pending_receipt'">
+                <el-button link type="success" size="small" @click="handleComplete(scope.row)">完成订单</el-button>
+              </template>
+            </div>
           </template>
         </el-table-column>
       </el-table>
@@ -304,7 +313,7 @@
           <div class="order-progress">
             <div class="progress-steps">
               <div 
-                v-for="(step, index) in getOrderSteps(selectedOrderData.status)" 
+                v-for="(step, index) in getOrderSteps(selectedOrderData.status, selectedOrderData)" 
                 :key="step.key"
                 class="progress-step"
                 :class="{
@@ -325,7 +334,7 @@
                   <div v-if="step.description" class="step-description">{{ step.description }}</div>
                   <div v-if="step.time" class="step-time">{{ step.time }}</div>
                 </div>
-                <div v-if="index < getOrderSteps(selectedOrderData.status).length - 1" class="step-line"></div>
+                <div v-if="index < getOrderSteps(selectedOrderData.status, selectedOrderData).length - 1" class="step-line"></div>
               </div>
             </div>
           </div>
@@ -400,7 +409,7 @@
               <div v-for="(item, index) in selectedOrderData.orderItems" :key="index" class="product-item">
                 <div class="product-image">
                   <el-image
-                    :src="item.imageUrl || '/assets/images/products/default.png'"
+                    :src="item.imageUrl || item.image || '/static/images/products/default.jpg'"
                     fit="cover"
                     style="width: 60px; height: 60px; border-radius: 4px;"
                   >
@@ -432,8 +441,24 @@
                   <span class="summary-label">商品总数：</span>
                   <span class="summary-value">{{ selectedOrderData.orderItems.reduce((sum, item) => sum + (item.quantity || 0), 0) }} 件</span>
                 </div>
+                <div class="summary-row">
+                  <span class="summary-label">商品原价：</span>
+                  <span class="summary-value">¥{{ getOriginalPrice(selectedOrderData).toFixed(2) }}</span>
+                </div>
+                <div class="summary-row" v-if="getCouponInfo(selectedOrderData)">
+                  <span class="summary-label">使用优惠券：</span>
+                  <span class="summary-value coupon-name">{{ getCouponInfo(selectedOrderData).name }}</span>
+                </div>
+                <div class="summary-row" v-if="getDiscountAmount(selectedOrderData) > 0">
+                  <span class="summary-label">优惠金额：</span>
+                  <span class="summary-value discount-amount">-¥{{ getDiscountAmount(selectedOrderData).toFixed(2) }}</span>
+                </div>
+                <div class="summary-row" v-if="selectedOrderData.shippingPrice && selectedOrderData.shippingPrice > 0">
+                  <span class="summary-label">运费：</span>
+                  <span class="summary-value">¥{{ selectedOrderData.shippingPrice?.toFixed(2) || '0.00' }}</span>
+                </div>
                 <div class="summary-row total-row">
-                  <span class="summary-label">订单总金额：</span>
+                  <span class="summary-label">实付金额：</span>
                   <span class="summary-value total-price">¥{{ selectedOrderData.totalPrice?.toFixed(2) || '0.00' }}</span>
                 </div>
               </div>
@@ -675,12 +700,14 @@ const getStatusType = (status) => {
 // 获取支付方式文本
 const getPaymentMethodText = (method) => {
   const methodMap = {
+    '微信支付': '微信支付',
+    '货到付款': '货到付款',
+    'wechat': '微信支付',
     'cash': '现金',
-    'wechat': '微信',
     'alipay': '支付宝',
     'card': '银行卡'
   }
-  return methodMap[method] || '-'
+  return methodMap[method] || method || '-'
 }
 
 // 获取完整地址
@@ -690,16 +717,102 @@ const getFullAddress = (address) => {
   return `${province || ''}${city || ''}${district || ''}${detail || ''}`
 }
 
-// 格式化时间
+// 格式化时间 - 使用固定格式避免locale差异
 const formatTime = (time) => {
-  if (!time) return '-'
-  return new Date(time).toLocaleString('zh-CN', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
+  console.log('⏰ formatTime调用 - 输入:', time, '类型:', typeof time);
+  
+  if (!time) {
+    console.log('⏰ formatTime返回: "-"');
+    return '-'
+  }
+  
+  const date = new Date(time)
+  console.log('⏰ 转换为Date:', date, '时间戳:', date.getTime());
+  
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  
+  const result = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  console.log('⏰ formatTime返回:', result);
+  
+  return result
+}
+
+// 计算商品原价
+const getOriginalPrice = (order) => {
+  if (!order || !order.orderItems) return 0
+  return order.orderItems.reduce((sum, item) => {
+    return sum + (item.price || 0) * (item.quantity || 1)
+  }, 0)
+}
+
+// 获取优惠券信息
+const getCouponInfo = (order) => {
+  if (!order) return null
+  
+  // 优先使用parsedCouponInfo
+  if (order.parsedCouponInfo) {
+    return {
+      name: order.parsedCouponInfo.name || '',
+      type: order.parsedCouponInfo.type || 'fixed',
+      value: order.parsedCouponInfo.value || 0
+    }
+  }
+  
+  // 否则使用usedCoupon字段
+  if (order.usedCoupon && order.usedCoupon.coupon) {
+    return {
+      name: order.usedCoupon.coupon.name || '',
+      type: order.usedCoupon.coupon.type || 'fixed',
+      value: order.usedCoupon.coupon.value || 0
+    }
+  }
+  
+  // 检查couponInfo字段（可能是JSON字符串）
+  if (order.couponInfo) {
+    try {
+      const parsed = typeof order.couponInfo === 'string' ? JSON.parse(order.couponInfo) : order.couponInfo
+      return {
+        name: parsed.name || '',
+        type: parsed.type || 'fixed',
+        value: parsed.value || 0
+      }
+    } catch (error) {
+      console.warn('解析优惠券信息失败:', error)
+    }
+  }
+  
+  return null
+}
+
+// 计算优惠金额
+const getDiscountAmount = (order) => {
+  if (!order) return 0
+  
+  // 如果有明确的优惠金额字段
+  if (order.discountAmount) {
+    return order.discountAmount
+  }
+  
+  // 否则根据优惠券信息计算
+  const couponInfo = getCouponInfo(order)
+  if (!couponInfo) return 0
+  
+  const originalPrice = getOriginalPrice(order)
+  
+  if (couponInfo.type === 'percentage') {
+    // 百分比优惠
+    return (originalPrice * couponInfo.value) / 100
+  } else if (couponInfo.type === 'fixed') {
+    // 固定金额优惠
+    return Math.min(couponInfo.value, originalPrice)
+  }
+  
+  return 0
 }
 
 // 处理状态变化
@@ -724,6 +837,17 @@ const handleCurrentChange = (page) => {
 
 // 查看订单详情
 const handleDetail = (row) => {
+  console.log('🎯 ========== 打开订单详情抽屉 ==========');
+  console.log('📦 传入的订单数据:', row);
+  console.log('⏰ 订单时间字段检查:');
+  console.log('  创建时间:', row.createdAt);
+  console.log('  支付时间:', row.paidAt);
+  console.log('  发货时间:', row.deliveredAt);
+  console.log('  完成时间:', row.completedAt);
+  console.log('  取消时间:', row.canceledAt);
+  console.log('  更新时间:', row.updatedAt);
+  console.log('🎯 =======================================');
+  
   selectedOrderId.value = row._id
   selectedOrderData.value = row
   detailDrawerVisible.value = true
@@ -983,7 +1107,11 @@ const getCustomerPhone = (row) => {
 }
 
 // 获取订单进度步骤
-const getOrderSteps = (status) => {
+const getOrderSteps = (status, order) => {
+  console.log('📊 ========== 生成订单状态步骤 ==========');
+  console.log('📊 输入状态:', status);
+  console.log('📊 订单数据:', order);
+  
   const allSteps = [
     {
       key: 'pending_payment',
@@ -1021,34 +1149,56 @@ const getOrderSteps = (status) => {
 
   // 根据当前订单状态设置步骤状态
   const statusIndex = allSteps.findIndex(step => step.key === status)
+  console.log('📊 状态索引:', statusIndex);
   
   if (statusIndex !== -1) {
-    if (status === 'completed') {
-      // 对于已完成的订单，所有步骤都标记为completed
-      for (let i = 0; i <= statusIndex; i++) {
-        allSteps[i].completed = true
-        // 模拟时间戳（实际项目中应该从订单数据中获取）
-        allSteps[i].time = formatTime(new Date(Date.now() - (statusIndex - i) * 24 * 60 * 60 * 1000))
-      }
-    } else {
-      // 对于其他状态，设置已完成的步骤和当前步骤
-      for (let i = 0; i < statusIndex; i++) {
-        allSteps[i].completed = true
-        // 模拟时间戳（实际项目中应该从订单数据中获取）
-        allSteps[i].time = formatTime(new Date(Date.now() - (statusIndex - i) * 24 * 60 * 60 * 1000))
-      }
+    // 为已完成的步骤设置真实时间戳
+    for (let i = 0; i <= statusIndex; i++) {
+      allSteps[i].completed = true
       
-      // 设置当前步骤
-      allSteps[statusIndex].current = true
-      allSteps[statusIndex].time = formatTime(new Date())
+      // 使用真实的订单时间戳
+      switch (allSteps[i].key) {
+        case 'pending_payment':
+          // 创建订单时间
+          allSteps[i].time = order?.createdAt ? formatTime(order.createdAt) : null;
+          console.log('📊 设置创建时间:', allSteps[i].time);
+          break;
+        case 'pending_shipment':
+          // 支付时间
+          allSteps[i].time = order?.paidAt ? formatTime(order.paidAt) : null;
+          console.log('📊 设置支付时间:', allSteps[i].time);
+          break;
+        case 'pending_receipt':
+          // 发货时间
+          allSteps[i].time = order?.deliveredAt ? formatTime(order.deliveredAt) : null;
+          console.log('📊 设置发货时间:', allSteps[i].time);
+          break;
+        case 'completed':
+          // 完成时间
+          const completedTime = order?.completedAt || order?.finishedAt || order?.receivedAt;
+          allSteps[i].time = completedTime ? formatTime(completedTime) : null;
+          console.log('📊 设置完成时间:', allSteps[i].time);
+          break;
+      }
+    }
+    
+    // 如果当前状态不是已完成，将当前步骤标记为current而不是completed
+    if (status !== 'completed' && statusIndex >= 0) {
+      allSteps[statusIndex].completed = false;
+      allSteps[statusIndex].current = true;
     }
   }
 
+  console.log('📊 最终生成的步骤:', allSteps);
+  console.log('📊 ===================================');
   return allSteps
 }
 
-// 获取订单操作日志
+// 获取订单操作日志 - 使用真实订单时间戳
 const getOrderLogs = (order) => {
+  console.log('📋 ========== 生成订单操作日志 ==========');
+  console.log('📋 订单数据:', order);
+  
   const logs = []
   
   // 创建订单日志
@@ -1060,83 +1210,70 @@ const getOrderLogs = (order) => {
     color: '#409EFF',
     operator: getUserName(order)
   })
+  console.log('📋 添加创建日志，时间:', formatTime(order.createdAt));
 
-  // 根据订单状态添加相应日志
-  const statusLogs = {
-    'pending_payment': [],
-    'pending_shipment': [
-      {
-        title: '确认付款',
-        description: '买家付款已确认，订单进入待发货状态',
-        time: formatTime(new Date(Date.now() - 2 * 60 * 60 * 1000)), // 模拟2小时前
-        type: 'success',
-        color: '#67C23A',
-        operator: '系统'
-      }
-    ],
-    'pending_receipt': [
-      {
-        title: '确认付款',
-        description: '买家付款已确认，订单进入待发货状态',
-        time: formatTime(new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)), // 模拟1天前
-        type: 'success',
-        color: '#67C23A',
-        operator: '系统'
-      },
-      {
-        title: '确认发货',
-        description: '商品已发货，正在配送中',
-        time: formatTime(new Date(Date.now() - 4 * 60 * 60 * 1000)), // 模拟4小时前
-        type: 'warning',
-        color: '#E6A23C',
-        operator: '管理员'
-      }
-    ],
-    'completed': [
-      {
-        title: '确认付款',
-        description: '买家付款已确认，订单进入待发货状态',
-        time: formatTime(new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)), // 模拟3天前
-        type: 'success',
-        color: '#67C23A',
-        operator: '系统'
-      },
-      {
-        title: '确认发货',
-        description: '商品已发货，正在配送中',
-        time: formatTime(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)), // 模拟2天前
-        type: 'warning',
-        color: '#E6A23C',
-        operator: '管理员'
-      },
-      {
-        title: '订单完成',
-        description: '买家确认收货，订单完成',
-        time: formatTime(new Date(Date.now() - 1 * 60 * 60 * 1000)), // 模拟1小时前
-        type: 'success',
-        color: '#67C23A',
-        operator: '系统'
-      }
-    ],
-    'canceled': [
-      {
-        title: '订单取消',
-        description: '订单已被取消',
-        time: formatTime(order.cancelledAt || new Date(Date.now() - 30 * 60 * 1000)), // 使用取消时间或模拟30分钟前
-        type: 'danger',
-        color: '#F56C6C',
-        operator: '管理员'
-      }
-    ]
+  // 只有真实存在时间戳的操作才添加日志
+  
+  // 支付日志
+  if (order.paidAt) {
+    logs.push({
+      title: '确认付款',
+      description: '买家付款已确认，订单进入待发货状态',
+      time: formatTime(order.paidAt),
+      type: 'success',
+      color: '#67C23A',
+      operator: '系统'
+    })
+    console.log('📋 添加支付日志，时间:', formatTime(order.paidAt));
   }
 
-  // 添加状态相关的日志
-  if (statusLogs[order.status]) {
-    logs.push(...statusLogs[order.status])
+  // 发货日志
+  if (order.deliveredAt) {
+    logs.push({
+      title: '确认发货',
+      description: '商品已发货，正在配送中',
+      time: formatTime(order.deliveredAt),
+      type: 'warning',
+      color: '#E6A23C',
+      operator: '管理员'
+    })
+    console.log('📋 添加发货日志，时间:', formatTime(order.deliveredAt));
+  }
+
+  // 完成日志
+  const completedTime = order.completedAt || order.finishedAt || order.receivedAt;
+  if (completedTime) {
+    logs.push({
+      title: '订单完成',
+      description: '买家确认收货，订单完成',
+      time: formatTime(completedTime),
+      type: 'success',
+      color: '#67C23A',
+      operator: '系统'
+    })
+    console.log('📋 添加完成日志，时间:', formatTime(completedTime));
+  }
+
+  // 取消日志
+  if (order.canceledAt || order.cancelledAt) {
+    logs.push({
+      title: '订单取消',
+      description: '订单已被取消',
+      time: formatTime(order.canceledAt || order.cancelledAt),
+      type: 'danger',
+      color: '#F56C6C',
+      operator: '管理员'
+    })
+    console.log('📋 添加取消日志，时间:', formatTime(order.canceledAt || order.cancelledAt));
   }
 
   // 按时间倒序排列（最新的在前面）
-  return logs.sort((a, b) => new Date(b.time) - new Date(a.time))
+  const sortedLogs = logs.sort((a, b) => new Date(b.time) - new Date(a.time))
+  
+  console.log('📋 最终生成的日志:', sortedLogs);
+  console.log('📋 ===================================');
+  
+  return sortedLogs
 }
 
 // 监听搜索关键词变化
@@ -1290,6 +1427,50 @@ onUnmounted(() => {
   border-radius: 4px;
   transition: all 0.3s ease;
   display: inline-block;
+}
+
+/* 表格内容样式优化 */
+.address-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.price-text {
+  font-weight: 600;
+  color: #f56c6c;
+}
+
+.payment-method-text {
+  font-size: 13px;
+}
+
+.action-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+  align-items: center;
+}
+
+.action-buttons .el-button {
+  margin: 2px !important;
+  font-size: 12px;
+}
+
+/* 表格行高优化 */
+.order-list-container :deep(.el-table .el-table__body-wrapper .el-table__row) {
+  height: 60px;
+}
+
+/* 冻结列样式优化 */
+.order-list-container :deep(.el-table .el-table-fixed-column--left) {
+  box-shadow: 1px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.order-list-container :deep(.el-table .el-table-fixed-column--right) {
+  box-shadow: -1px 0 8px rgba(0, 0, 0, 0.1);
 }
 
 .product-count-display:hover {
@@ -1801,6 +1982,16 @@ onUnmounted(() => {
   color: #E6A23C;
 }
 
+.coupon-name {
+  color: #67C23A;
+  font-weight: 600;
+}
+
+.discount-amount {
+  color: #67C23A;
+  font-weight: 600;
+}
+
 .detail-actions {
   display: flex;
   gap: 12px;
@@ -1891,4 +2082,4 @@ onUnmounted(() => {
     display: none;
   }
 }
-</style> 
+</style>
