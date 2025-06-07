@@ -453,9 +453,9 @@
                   <span class="summary-label">优惠金额：</span>
                   <span class="summary-value discount-amount">-¥{{ getDiscountAmount(selectedOrderData).toFixed(2) }}</span>
                 </div>
-                <div class="summary-row" v-if="selectedOrderData.shippingPrice && selectedOrderData.shippingPrice > 0">
+                <div class="summary-row">
                   <span class="summary-label">运费：</span>
-                  <span class="summary-value">¥{{ selectedOrderData.shippingPrice?.toFixed(2) || '0.00' }}</span>
+                  <span class="summary-value">¥{{ (selectedOrderData.shippingPrice || 0).toFixed(2) }}</span>
                 </div>
                 <div class="summary-row total-row">
                   <span class="summary-label">实付金额：</span>

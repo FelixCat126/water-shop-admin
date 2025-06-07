@@ -42,7 +42,7 @@
                 </el-select>
               </el-form-item>
               
-              <el-row :gutter="20">
+                            <el-row :gutter="20">
                 <el-col :span="12">
                   <el-form-item label="商品价格" prop="price">
                     <el-input-number
@@ -51,9 +51,25 @@
                       :precision="2"
                       :step="0.1"
                       style="width: 100%"
+                      placeholder="请输入商品价格"
                     />
                   </el-form-item>
                 </el-col>
+                <el-col :span="12">
+                  <el-form-item label="原价" prop="originalPrice">
+                    <el-input-number
+                      v-model="form.originalPrice"
+                      :min="0"
+                      :precision="2"
+                      :step="0.1"
+                      style="width: 100%"
+                      placeholder="不填则不显示原价"
+                    />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              
+              <el-row :gutter="20">
                 <el-col :span="12">
                   <el-form-item label="商品库存" prop="stock">
                     <el-input-number
@@ -65,11 +81,12 @@
                     />
                   </el-form-item>
                 </el-col>
+                <el-col :span="12">
+                  <el-form-item label="商品单位" prop="unit">
+                    <el-input v-model="form.unit" placeholder="如: 桶、台、个" />
+                  </el-form-item>
+                </el-col>
               </el-row>
-              
-              <el-form-item label="商品单位" prop="unit">
-                <el-input v-model="form.unit" placeholder="如: 桶、台、个" />
-              </el-form-item>
               
               <el-form-item label="商品状态" prop="status">
                 <el-radio-group v-model="form.status">
@@ -218,6 +235,7 @@ const form = reactive({
   category: '',
   tag: '',
   price: 0,
+  originalPrice: null,
   stock: 0,
   unit: '个',
   status: 'on',

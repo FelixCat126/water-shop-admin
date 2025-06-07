@@ -286,6 +286,22 @@
           </template>
         </el-table-column>
         
+        <!-- 原价 -->
+        <el-table-column
+          prop="originalPrice"
+          label="原价"
+          width="120"
+          align="center"
+          v-if="visibleColumns.includes('originalPrice')"
+        >
+          <template #default="scope">
+            <span v-if="scope.row.originalPrice" class="original-price-text">
+              ¥{{ scope.row.originalPrice.toFixed(2) }}
+            </span>
+            <span v-else class="no-original-price">-</span>
+          </template>
+        </el-table-column>
+        
         <!-- 分类 -->
         <el-table-column
           prop="category"
@@ -538,6 +554,10 @@
               <label>商品价格：</label>
               <span class="price">¥{{ selectedProductData.price }}</span>
             </div>
+            <div class="info-row" v-if="selectedProductData.originalPrice && selectedProductData.originalPrice > 0">
+              <label>原价：</label>
+              <span class="original-price">¥{{ selectedProductData.originalPrice }}</span>
+            </div>
             <div class="info-row">
               <label>库存数量：</label>
               <span :class="{ 'low-stock': selectedProductData.stock < 10 }">
@@ -677,6 +697,22 @@
                       </el-form-item>
                     </el-col>
                     <el-col :span="12">
+                      <el-form-item label="原价">
+                        <el-input-number 
+                          v-model="productForm.originalPrice" 
+                          :min="0" 
+                          :precision="2"
+                          :step="0.1"
+                          style="width: 100%"
+                          placeholder="不填则不显示原价"
+                          controls-position="right"
+                        />
+                      </el-form-item>
+                    </el-col>
+                  </el-row>
+
+                  <el-row :gutter="16">
+                    <el-col :span="12">
                       <el-form-item label="库存数量" prop="stock">
                         <el-input-number 
                           v-model="productForm.stock" 
@@ -687,9 +723,6 @@
                         />
                       </el-form-item>
                     </el-col>
-                  </el-row>
-
-                  <el-row :gutter="16">
                     <el-col :span="12">
                       <el-form-item label="商品单位" prop="unit">
                         <el-input 
@@ -699,10 +732,9 @@
                         />
                       </el-form-item>
                     </el-col>
-                    <el-col :span="12">
-                      <!-- 预留空间，可以添加其他字段 -->
-                    </el-col>
                   </el-row>
+
+                  <!-- 商品单位字段已移至上方库存数量行 -->
 
                   <el-form-item label="商品标签">
                     <el-select 
@@ -732,7 +764,7 @@
               <!-- 商品描述区域 -->
               <div class="form-section">
                 <div class="section-header">
-                  <el-icon class="section-icon"><目的Document /></el-icon>
+                  <el-icon class="section-icon"><Document /></el-icon>
                   <span class="section-title">商品描述</span>
                 </div>
                 <div class="section-content">
@@ -1025,6 +1057,7 @@ const allColumns = [
   { key: 'name', label: '商品名称' },
   { key: 'tag', label: '商品标签' },
   { key: 'price', label: '价格' },
+  { key: 'originalPrice', label: '原价' },
   { key: 'category', label: '分类' },
   { key: 'stock', label: '库存' },
   { key: 'sales', label: '销量' },
@@ -1035,7 +1068,7 @@ const allColumns = [
 
 // 默认显示的列
 const visibleColumns = ref([
-  'image', 'name', 'tag', 'price', 'category', 
+  'image', 'name', 'tag', 'price', 'originalPrice', 'category', 
   'stock', 'sales', 'status', 'createdAt'
 ])
 
@@ -1476,6 +1509,7 @@ const productForm = reactive({
   category: '',
   tags: [],
   price: 0,
+  originalPrice: null,
   stock: 0,
   unit: '个',
   status: 'on',
@@ -1530,6 +1564,7 @@ const resetProductForm = () => {
     category: '',
     tags: [],
     price: 0,
+    originalPrice: null,
     stock: 0,
     unit: '个',
     status: 'on',
@@ -1574,6 +1609,7 @@ const fillProductForm = (product) => {
     category: convertCategoryToForm(product.category) || '',
     tags: tags,
     price: product.price || 0,
+    originalPrice: product.originalPrice || null,
     stock: product.stock || 0,
     unit: product.unit || '个',
     status: product.isActive ? 'on' : 'off', // 从 isActive 转换为 status
@@ -2765,5 +2801,21 @@ const handleSubmit = async () => {
   color: #909399;
   margin-top: 4px;
   line-height: 1.4;
+}
+
+/* 原价样式 */
+.original-price-text {
+  color: #999;
+  text-decoration: line-through;
+}
+
+.no-original-price {
+  color: #ccc;
+}
+
+.original-price {
+  color: #999;
+  text-decoration: line-through;
+  font-size: 14px;
 }
 </style> 

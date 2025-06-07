@@ -87,7 +87,7 @@
               <div class="stat-label">订单总数</div>
             </div>
             <div class="stat-item">
-              <div class="stat-value">¥{{ userDetail.totalConsumption || 0 }}</div>
+              <div class="stat-value">¥{{ formatPrice(userDetail.totalConsumption || 0) }}</div>
               <div class="stat-label">总消费金额</div>
             </div>
             <div class="stat-item">
@@ -317,6 +317,61 @@
           </div>
           <div v-else class="empty-coupons">
             <el-empty description="该用户暂无优惠券" />
+          </div>
+        </el-card>
+
+        <!-- 收货地址列表 -->
+        <el-card shadow="never" class="addresses-card">
+          <template #header>
+            <div class="card-header">
+              <span>收货地址</span>
+              <span class="address-count">共 {{ userDetail.addresses ? userDetail.addresses.length : 0 }} 个地址</span>
+            </div>
+          </template>
+          
+          <div v-if="userDetail.addresses && userDetail.addresses.length > 0" class="addresses-list">
+            <el-table 
+              :data="userDetail.addresses" 
+              style="width: 100%"
+              size="small"
+              max-height="400"
+            >
+              <el-table-column prop="name" label="收货人" width="120">
+                <template #default="scope">
+                  <div class="address-name">
+                    {{ scope.row.name }}
+                    <el-tag v-if="scope.row.isDefault" type="success" size="small" class="default-tag">
+                      默认
+                    </el-tag>
+                  </div>
+                </template>
+              </el-table-column>
+              <el-table-column prop="phone" label="联系电话" width="140">
+                <template #default="scope">
+                  {{ scope.row.phone }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="address" label="详细地址" min-width="200">
+                <template #default="scope">
+                  <el-tooltip :content="getFullAddress(scope.row)" placement="top">
+                    <span class="address-text">{{ getFullAddress(scope.row) }}</span>
+                  </el-tooltip>
+                </template>
+              </el-table-column>
+              <el-table-column prop="createdAt" label="添加时间" width="140">
+                <template #default="scope">
+                  {{ formatDate(scope.row.createdAt) }}
+                </template>
+              </el-table-column>
+              <el-table-column prop="updatedAt" label="更新时间" width="140">
+                <template #default="scope">
+                  {{ formatDate(scope.row.updatedAt) }}
+                </template>
+              </el-table-column>
+            </el-table>
+          </div>
+          <div v-else class="empty-addresses">
+            <el-empty description="该用户暂无收货地址" />
           </div>
         </el-card>
 
@@ -680,6 +735,22 @@ const couponStats = computed(() => {
   return { total, used, expired, available }
 })
 
+// 格式化完整地址
+const getFullAddress = (address) => {
+  if (!address) return ''
+  
+  const parts = []
+  if (address.province) parts.push(address.province)
+  if (address.city) parts.push(address.city)
+  if (address.district) parts.push(address.district)
+  // 支持多种地址字段名称
+  if (address.detail) parts.push(address.detail)
+  else if (address.address) parts.push(address.address)
+  else if (address.detailAddress) parts.push(address.detailAddress)
+  
+  return parts.join('')
+}
+
 // 格式化生日
 const formatBirthday = (birthday) => {
   if (!birthday) return '未设置'
@@ -698,6 +769,12 @@ const formatBirthday = (birthday) => {
     console.error('生日格式化错误:', error)
     return '未设置'
   }
+}
+
+// 格式化价格
+const formatPrice = (price) => {
+  if (price === null || price === undefined) return '0.00'
+  return Number(price).toFixed(2)
 }
 
 // 组件挂载后执行
@@ -1016,12 +1093,61 @@ onMounted(() => {
 .order-number-text,
 .date-text,
 .product-name-text,
-.description-text {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.description-text,
+.address-text {
+  white-space: normal;
+  word-break: break-all;
+  word-wrap: break-word;
+  line-height: 1.4;
   display: block;
   max-width: 100%;
+}
+
+/* 地址列表样式 */
+.addresses-card {
+  margin-bottom: 20px;
+}
+
+.address-count {
+  font-size: 12px;
+  color: #909399;
+  margin-left: 8px;
+}
+
+.address-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.default-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  height: 18px;
+  line-height: 14px;
+}
+
+.empty-addresses {
+  padding: 40px 0;
+  text-align: center;
+}
+
+.addresses-list .el-table {
+  border: 1px solid #ebeef5;
+  border-radius: 4px;
+}
+
+.addresses-list .el-table th {
+  background-color: #fafafa;
+  font-weight: 500;
+  color: #303133;
+}
+
+.addresses-list .el-table td {
+  border-bottom: 1px solid #ebeef5;
+  height: auto;
+  min-height: 40px;
+  padding: 8px 0;
 }
 </style>
 
@@ -1061,4 +1187,4 @@ onMounted(() => {
   overflow: hidden !important;
   text-overflow: ellipsis !important;
 }
-</style> 
+</style>

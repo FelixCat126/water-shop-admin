@@ -72,7 +72,7 @@
       </el-form>
       
       <div class="login-footer">
-        <div class="demo-tips">
+        <div v-if="showDemoTips" class="demo-tips">
           <el-alert
             title="演示账号信息"
             type="info"
@@ -96,7 +96,7 @@
 </template>
 
 <script setup>
-import { reactive, ref, onMounted, computed } from 'vue'
+import { reactive, ref, onMounted, onUnmounted, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useUserStore } from '../store/user'
 import { ElMessage } from 'element-plus'
@@ -104,6 +104,16 @@ import { ElMessage } from 'element-plus'
 const userStore = useUserStore()
 const { loading, error } = storeToRefs(userStore)
 const loginFormRef = ref(null)
+
+// 控制演示账号信息显示
+const showDemoTips = ref(false)
+
+// 键盘按键状态
+const keysPressed = reactive({
+  cmd: false,
+  q: false,
+  p: false
+})
 
 // 获取当前年份
 const currentYear = computed(() => {
@@ -128,6 +138,46 @@ const loginRules = {
   ]
 }
 
+// 检查是否同时按下了 Command+Q+P
+const checkKeyCombo = () => {
+  if (keysPressed.cmd && keysPressed.q && keysPressed.p) {
+    showDemoTips.value = !showDemoTips.value
+    if (showDemoTips.value) {
+      ElMessage.success('演示账号信息已显示')
+    } else {
+      ElMessage.info('演示账号信息已隐藏')
+    }
+  }
+}
+
+// 键盘按下事件
+const handleKeyDown = (event) => {
+  if (event.metaKey || event.ctrlKey) {
+    keysPressed.cmd = true
+  }
+  if (event.key.toLowerCase() === 'q') {
+    keysPressed.q = true
+  }
+  if (event.key.toLowerCase() === 'p') {
+    keysPressed.p = true
+  }
+  
+  checkKeyCombo()
+}
+
+// 键盘释放事件
+const handleKeyUp = (event) => {
+  if (!event.metaKey && !event.ctrlKey) {
+    keysPressed.cmd = false
+  }
+  if (event.key.toLowerCase() === 'q') {
+    keysPressed.q = false
+  }
+  if (event.key.toLowerCase() === 'p') {
+    keysPressed.p = false
+  }
+}
+
 // 处理登录
 const handleLogin = () => {
   loginFormRef.value.validate(async (valid) => {
@@ -140,9 +190,19 @@ const handleLogin = () => {
   })
 }
 
-// 页面标题
+// 页面标题和事件监听
 onMounted(() => {
   document.title = 'SPRINKLE 后台管理'
+  
+  // 添加键盘事件监听
+  document.addEventListener('keydown', handleKeyDown)
+  document.addEventListener('keyup', handleKeyUp)
+})
+
+// 清理事件监听
+onUnmounted(() => {
+  document.removeEventListener('keydown', handleKeyDown)
+  document.removeEventListener('keyup', handleKeyUp)
 })
 </script>
 

@@ -36,9 +36,17 @@
               <label>商品描述:</label>
               <span>{{ product.description }}</span>
             </div>
-            <div class="detail-item">
+                        <div class="detail-item">
               <label>商品价格:</label>
               <span class="price">¥{{ product.price?.toFixed(2) }}</span>
+            </div>
+            <div class="detail-item" v-if="product.originalPrice && product.originalPrice > 0">
+              <label>原价:</label>
+              <span class="original-price">¥{{ product.originalPrice?.toFixed(2) }}</span>
+            </div>
+            <div class="detail-item" v-if="product.originalPrice && product.originalPrice > 0">
+              <label>原价:</label>
+              <span class="original-price">¥{{ product.originalPrice?.toFixed(2) }}</span>
             </div>
             <div class="detail-item">
               <label>商品分类:</label>
@@ -334,6 +342,12 @@ onMounted(() => {
   color: #E6A23C;
   font-weight: bold;
   font-size: 16px;
+}
+
+.original-price {
+  color: #999;
+  text-decoration: line-through;
+  font-size: 14px;
 }
 
 .stock {
