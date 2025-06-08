@@ -20,8 +20,8 @@ export function getUserInfo() {
 // 修改密码
 export function changePassword(data) {
   return request({
-    url: '/admin/auth/change-password',
-    method: 'post',
+    url: '/admin/auth/password',
+    method: 'put',
     data
   })
 } 

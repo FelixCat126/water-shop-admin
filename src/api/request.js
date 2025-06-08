@@ -62,8 +62,14 @@ request.interceptors.response.use(
           ElMessage.error('服务器内部错误')
           break
         default:
-          // 只有在不是登录接口时才显示全局错误提示
-          if (!response.config.url || !response.config.url.includes('/auth/login')) {
+          // 只有在不是登录接口、修改密码接口和重置密码接口时才显示全局错误提示
+          const isPasswordRelatedAPI = response.config.url && (
+            response.config.url.includes('/auth/login') || 
+            response.config.url.includes('/auth/password') ||
+            response.config.url.includes('/password')
+          )
+          
+          if (!isPasswordRelatedAPI) {
             ElMessage.error(response.data.message || '请求失败')
           }
       }

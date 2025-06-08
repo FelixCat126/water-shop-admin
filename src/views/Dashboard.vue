@@ -115,11 +115,29 @@
             <template #header>
               <div class="card-header">
                 <span>商品销售排行</span>
+                <div class="sort-buttons">
+                  <el-button 
+                    size="small" 
+                    :type="rankingSortType === 'sales' ? 'primary' : ''" 
+                    :plain="rankingSortType !== 'sales'"
+                    @click="changeRankingSortType('sales')"
+                  >
+                    销量
+                  </el-button>
+                  <el-button 
+                    size="small" 
+                    :type="rankingSortType === 'amount' ? 'primary' : ''" 
+                    :plain="rankingSortType !== 'amount'"
+                    @click="changeRankingSortType('amount')"
+                  >
+                    金额
+                  </el-button>
+                </div>
               </div>
             </template>
             <div class="ranking-list">
               <div v-for="(item, index) in topProducts.slice(0, 7)" :key="index" class="ranking-item">
-                <div class="ranking-index" :class="index < 3 ? 'top-rank' : ''">{{ index + 1 }}</div>
+                <div class="ranking-index" :class="getRankingIndexClass(index)">{{ index + 1 }}</div>
                 <div class="ranking-info">
                   <div class="ranking-name">
                     {{ item.name }}
@@ -196,6 +214,24 @@
             <template #header>
               <div class="card-header">
                 <span>商品销售占比</span>
+                <div class="sort-buttons">
+                  <el-button 
+                    size="small" 
+                    :type="pieSortType === 'sales' ? 'primary' : ''" 
+                    :plain="pieSortType !== 'sales'"
+                    @click="changePieSortType('sales')"
+                  >
+                    销量
+                  </el-button>
+                  <el-button 
+                    size="small" 
+                    :type="pieSortType === 'amount' ? 'primary' : ''" 
+                    :plain="pieSortType !== 'amount'"
+                    @click="changePieSortType('amount')"
+                  >
+                    金额
+                  </el-button>
+                </div>
               </div>
             </template>
             <div class="chart-container pie-container">
@@ -241,6 +277,14 @@ const stats = reactive({
 
 // 热销商品
 const topProducts = ref([])
+// 饼图产品数据
+const pieProducts = ref([])
+// 原始产品数据（用于排序）
+const originalProductsData = ref([])
+// 排行榜排序方式：'sales' | 'amount'
+const rankingSortType = ref('sales')
+// 饼图排序方式：'sales' | 'amount'  
+const pieSortType = ref('sales')
 
 // 最近订单
 const latestOrders = ref([])
@@ -262,6 +306,98 @@ const goToOrderManagement = () => {
   router.push('/orders')
 }
 
+// 切换排行榜排序方式
+const changeRankingSortType = (type) => {
+  rankingSortType.value = type
+  sortRankingProducts()
+}
+
+// 切换饼图排序方式
+const changePieSortType = (type) => {
+  pieSortType.value = type
+  sortPieProducts()
+  // 重新初始化饼图
+  nextTick(() => {
+    initPieChart()
+  })
+}
+
+// 对排行榜产品数据进行排序
+const sortRankingProducts = () => {
+  if (!originalProductsData.value || originalProductsData.value.length === 0) {
+    return
+  }
+  
+  // 深度复制原始数据，确保完全独立
+  const sortedData = originalProductsData.value.map(item => ({
+    id: item.id,
+    name: item.name,
+    sales: item.sales,
+    amount: item.amount,
+    percent: 0
+  }))
+  
+  // 根据排序类型排序
+  if (rankingSortType.value === 'sales') {
+    sortedData.sort((a, b) => b.sales - a.sales)
+  } else if (rankingSortType.value === 'amount') {
+    sortedData.sort((a, b) => b.amount - a.amount)
+  }
+  
+  // 重新计算百分比
+  const total = sortedData.reduce((sum, item) => {
+    return sum + (rankingSortType.value === 'sales' ? item.sales : item.amount)
+  }, 0)
+  
+  sortedData.forEach(item => {
+    if (rankingSortType.value === 'sales') {
+      item.percent = total > 0 ? Math.round((item.sales / total) * 100) : 0
+    } else {
+      item.percent = total > 0 ? Math.round((item.amount / total) * 100) : 0
+    }
+  })
+  
+  topProducts.value = sortedData
+}
+
+// 对饼图产品数据进行排序
+const sortPieProducts = () => {
+  if (!originalProductsData.value || originalProductsData.value.length === 0) {
+    return
+  }
+  
+  // 深度复制原始数据，确保完全独立
+  const sortedData = originalProductsData.value.map(item => ({
+    id: item.id,
+    name: item.name,
+    sales: item.sales,
+    amount: item.amount,
+    percent: 0
+  }))
+  
+  // 根据排序类型排序
+  if (pieSortType.value === 'sales') {
+    sortedData.sort((a, b) => b.sales - a.sales)
+  } else if (pieSortType.value === 'amount') {
+    sortedData.sort((a, b) => b.amount - a.amount)
+  }
+  
+  // 重新计算百分比
+  const total = sortedData.reduce((sum, item) => {
+    return sum + (pieSortType.value === 'sales' ? item.sales : item.amount)
+  }, 0)
+  
+  sortedData.forEach(item => {
+    if (pieSortType.value === 'sales') {
+      item.percent = total > 0 ? Math.round((item.sales / total) * 100) : 0
+    } else {
+      item.percent = total > 0 ? Math.round((item.amount / total) * 100) : 0
+    }
+  })
+  
+  pieProducts.value = sortedData
+}
+
 // 初始化饼图
 const initPieChart = () => {
   const chartDom = document.getElementById('pie-chart')
@@ -277,7 +413,7 @@ const initPieChart = () => {
   pieChart = echarts.init(chartDom)
   
   // 如果没有数据，显示加载中
-  if (!topProducts.value || topProducts.value.length === 0) {
+  if (!pieProducts.value || pieProducts.value.length === 0) {
     console.log('饼图数据为空，显示加载中')
     pieChart.showLoading({
       text: '加载中...',
@@ -286,7 +422,7 @@ const initPieChart = () => {
     return
   }
   
-  console.log('初始化饼图，产品数据:', topProducts.value)
+  console.log('初始化饼图，产品数据:', pieProducts.value)
   pieChart.hideLoading()
   
   // 饼图颜色
@@ -295,10 +431,10 @@ const initPieChart = () => {
     '#975FE4', '#36A3F7', '#58D1C9', '#F5A623', '#E74C3C'
   ]
   
-  // 准备饼图数据
-  const pieData = topProducts.value.slice(0, 7).map((item, index) => ({
+  // 准备饼图数据，根据排序类型选择显示的值
+  const pieData = pieProducts.value.slice(0, 7).map((item, index) => ({
     name: item.name,
-    value: item.sales,
+    value: pieSortType.value === 'sales' ? item.sales : item.amount,
     itemStyle: {
       color: pieColors[index % pieColors.length]
     }
@@ -307,7 +443,11 @@ const initPieChart = () => {
   const option = {
     tooltip: {
       trigger: 'item',
-      formatter: '{a} <br/>{b}: {c} ({d}%)'
+      formatter: function(params) {
+        const unit = pieSortType.value === 'sales' ? '销量' : '金额'
+        const value = pieSortType.value === 'sales' ? params.value : `¥${params.value}`
+        return `${params.seriesName} <br/>${params.name}: ${value} (${params.percent}%)`
+      }
     },
     legend: {
       type: 'scroll',
@@ -319,11 +459,11 @@ const initPieChart = () => {
       textStyle: {
         fontSize: 12
       },
-      data: topProducts.value.slice(0, 7).map(item => item.name)
+      data: pieProducts.value.slice(0, 7).map(item => item.name)
     },
     series: [
       {
-        name: '销售占比',
+        name: pieSortType.value === 'sales' ? '销量占比' : '金额占比',
         type: 'pie',
         radius: ['40%', '65%'],
         center: ['30%', '50%'],
@@ -364,6 +504,14 @@ const getPercentClass = (index) => {
   if (index === 0) return 'percent-first'
   if (index === 1) return 'percent-second'
   if (index === 2) return 'percent-third'
+  return ''
+}
+
+// 获取排行序号样式类
+const getRankingIndexClass = (index) => {
+  if (index === 0) return 'rank-first'
+  if (index === 1) return 'rank-second'
+  if (index === 2) return 'rank-third'
   return ''
 }
 
@@ -552,6 +700,34 @@ const fetchLatestOrders = async () => {
   }
 }
 
+// 获取真实的商品销售数据
+const fetchProductSales = async () => {
+  try {
+    console.log('开始获取商品销售数据...')
+    const response = await getProductSales()
+    if (response && response.success && response.data) {
+      console.log('获取到商品销售数据:', response.data)
+      originalProductsData.value = response.data
+      sortRankingProducts() // 初始化排行榜数据
+      sortPieProducts() // 初始化饼图数据
+    } else {
+      console.error('获取商品销售数据失败:', response)
+      // 如果API失败，使用备用的模拟数据
+      console.log('使用备用模拟数据')
+      originalProductsData.value = generateMockProductSales()
+      sortRankingProducts() // 初始化排行榜数据
+      sortPieProducts() // 初始化饼图数据
+    }
+  } catch (error) {
+    console.error('获取商品销售数据出错:', error)
+    // API出错时使用模拟数据作为备份
+    console.log('API出错，使用备用模拟数据')
+    originalProductsData.value = generateMockProductSales()
+    sortRankingProducts() // 初始化排行榜数据
+    sortPieProducts() // 初始化饼图数据
+  }
+}
+
 // 生成基于真实SPRINKLE产品的销售数据（解决数据重复问题）
 const generateMockProductSales = () => {
   const productNames = [
@@ -601,9 +777,8 @@ onMounted(async () => {
   // 获取最新订单数据
   await fetchLatestOrders()
   
-  // 直接使用SPRINKLE产品模拟数据，避免API返回错误数据
-  console.log('使用SPRINKLE产品模拟数据')
-  topProducts.value = generateMockProductSales()
+  // 获取真实的商品销售数据
+  await fetchProductSales()
   
   // 使用nextTick确保DOM完全渲染后再初始化图表
   await nextTick()
@@ -790,6 +965,34 @@ onBeforeUnmount(() => {
   line-height: 1;
 }
 
+.sort-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.sort-buttons .el-button {
+  padding: 4px 8px;
+  font-size: 12px;
+  height: 24px;
+}
+
+/* 趋势图按钮样式，与排序按钮保持一致 */
+.el-radio-group .el-radio-button__inner {
+  padding: 4px 8px;
+  font-size: 12px;
+  height: 24px;
+  line-height: 16px;
+  border-radius: 4px;
+}
+
+.el-radio-group .el-radio-button:first-child .el-radio-button__inner {
+  border-radius: 4px 0 0 4px;
+}
+
+.el-radio-group .el-radio-button:last-child .el-radio-button__inner {
+  border-radius: 0 4px 4px 0;
+}
+
 .chart-card {
   display: flex;
   flex-direction: column;
@@ -850,15 +1053,36 @@ onBeforeUnmount(() => {
 .ranking-index {
   width: 24px;
   height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  max-width: 24px;
+  max-height: 24px;
   line-height: 24px;
   text-align: center;
   border-radius: 50%;
   background-color: #f0f2f5;
   margin-right: 10px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 500;
 }
 
-.top-rank {
-  background-color: #ff9800;
+.rank-first {
+  background-color: #F56C6C;
+  color: white;
+}
+
+.rank-second {
+  background-color: #E6A23C;
+  color: white;
+}
+
+.rank-third {
+  background-color: #409EFF;
   color: white;
 }
 

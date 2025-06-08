@@ -109,15 +109,22 @@ router.beforeEach((to, from, next) => {
   
   if (to.meta.requiresAuth && !token) {
     next('/login')
-  } else {
-    // 设置页面标题
-    if (to.meta.title) {
-          document.title = `SPRINKLE - ${to.meta.title}`
-  } else {
-    document.title = 'SPRINKLE'
+  } else if (to.name === 'Admins') {
+    // 检查管理员账号权限：只有超级管理员和管理员可以访问
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    if (userInfo.role !== 'super_admin' && userInfo.role !== 'admin') {
+      next('/')
+      return
     }
-    next()
   }
+  
+  // 设置页面标题
+  if (to.meta.title) {
+        document.title = `SPRINKLE - ${to.meta.title}`
+} else {
+  document.title = 'SPRINKLE'
+  }
+  next()
 })
 
 export default router 

@@ -55,11 +55,22 @@
           border
           style="width: 100%"
         >
-          <el-table-column prop="username" label="用户名" width="150" show-overflow-tooltip />
+          <el-table-column prop="username" label="用户名" width="150" show-overflow-tooltip fixed="left" />
           
           <el-table-column prop="realName" label="真实姓名" width="150" show-overflow-tooltip />
           
           <el-table-column prop="email" label="邮箱" min-width="200" show-overflow-tooltip />
+          
+          <el-table-column label="创建者" width="150" align="center">
+            <template #default="{ row }">
+              <span v-if="row.createdBy" class="creator-text">
+                {{ getCreatorName(row.createdBy) }}
+              </span>
+              <span v-else class="creator-text system">
+                {{ row.role === 'super_admin' ? '系统初始' : '系统创建' }}
+              </span>
+            </template>
+          </el-table-column>
           
           <el-table-column label="角色" width="120" align="center">
             <template #default="{ row }">
@@ -74,7 +85,7 @@
               <el-switch
                 v-model="row.isActive"
                 @change="(val) => handleToggleStatus(row, val)"
-                :disabled="row.role === 'super_admin'"
+                :disabled="row.role === 'super_admin' || row._id === userInfo.id"
               />
             </template>
           </el-table-column>
@@ -91,14 +102,26 @@
             </template>
           </el-table-column>
           
-          <el-table-column label="操作" width="150" fixed="right" align="center">
+          <el-table-column label="操作" width="200" fixed="right" align="center">
             <template #default="{ row }">
               <el-button link type="primary" @click="handleEdit(row)">编辑</el-button>
+              
+              <!-- 重置密码按钮：仅超级管理员可见，且不能重置自己和其他超级管理员 -->
+              <el-button 
+                v-if="userInfo.role === 'super_admin' && row.role !== 'super_admin' && row._id !== userInfo.id"
+                link 
+                type="warning" 
+                @click="handleResetPassword(row)"
+              >
+                <el-icon><Key /></el-icon>
+                重置
+              </el-button>
+              
               <el-button 
                 link 
                 type="danger" 
                 @click="handleDelete(row)"
-                :disabled="row.role === 'super_admin'"
+                :disabled="row.role === 'super_admin' || row._id === userInfo.id"
               >
                 删除
               </el-button>
@@ -154,11 +177,32 @@
           </el-form-item>
           
           <el-form-item label="角色" prop="role">
-            <el-select v-model="adminForm.role" placeholder="请选择角色" style="width: 100%">
-              <el-option label="超级管理员" value="super_admin" />
-              <el-option label="管理员" value="admin" />
-              <el-option label="操作员" value="operator" />
+            <el-select 
+              v-model="adminForm.role" 
+              placeholder="请选择角色" 
+              style="width: 100%"
+              :disabled="(adminForm._id && adminForm.role === 'super_admin') || (adminForm._id === userInfo.id && userInfo.role === 'admin')"
+            >
+              <el-option 
+                v-for="role in availableRoles"
+                :key="role.value"
+                :label="role.label" 
+                :value="role.value" 
+              />
             </el-select>
+            <div v-if="adminForm._id && adminForm.role === 'super_admin'" class="form-tip">
+              <el-text type="info" size="small">超级管理员角色不可修改</el-text>
+            </div>
+            <div v-if="userInfo.role === 'admin' && !adminForm._id" class="form-tip">
+              <el-text type="info" size="small">管理员只能创建操作员账号</el-text>
+            </div>
+            <div v-if="userInfo.role === 'super_admin' && !adminForm._id" class="form-tip">
+              <el-text type="info" size="small">超级管理员可以创建管理员或操作员账号（当前角色：{{ userInfo.role }}）</el-text>
+            </div>
+            <div v-if="adminForm._id === userInfo.id && userInfo.role === 'admin'" class="form-tip">
+              <el-text type="warning" size="small">不能修改自己的角色</el-text>
+            </div>
+
           </el-form-item>
           
           <el-form-item v-if="!adminForm._id" label="密码" prop="password">
@@ -193,10 +237,13 @@
               v-model="adminForm.isActive"
               active-text="启用"
               inactive-text="禁用"
-              :disabled="adminForm.role === 'super_admin'"
+              :disabled="adminForm.role === 'super_admin' || adminForm._id === userInfo.id"
             />
             <div v-if="adminForm.role === 'super_admin'" class="form-tip">
               <el-text type="warning" size="small">超级管理员不能被禁用</el-text>
+            </div>
+            <div v-if="adminForm._id === userInfo.id && adminForm.role !== 'super_admin'" class="form-tip">
+              <el-text type="warning" size="small">不能禁用自己的账户</el-text>
             </div>
           </el-form-item>
         </el-form>
@@ -214,7 +261,9 @@
   <script setup>
   import { ref, reactive, onMounted, computed, watch } from 'vue'
   import { ElMessage, ElMessageBox } from 'element-plus'
-  import { Plus, Search, Refresh } from '@element-plus/icons-vue'
+  import { Plus, Search, Refresh, Key } from '@element-plus/icons-vue'
+  import { storeToRefs } from 'pinia'
+  import { useUserStore } from '../../store/user'
   import request from '../../api/request'
   
   // 响应式数据
@@ -223,6 +272,10 @@
   const adminList = ref([])
   const dialogVisible = ref(false)
   const adminFormRef = ref()
+  
+  // 获取用户store信息
+  const userStore = useUserStore()
+  const { userInfo } = storeToRefs(userStore)
   
   // 搜索表单
   const searchForm = reactive({
@@ -288,6 +341,32 @@
   const dialogTitle = computed(() => {
     return adminForm._id ? '编辑管理员' : '新增管理员'
   })
+
+  // 计算可用的角色选项
+  const availableRoles = computed(() => {
+    const roles = []
+    
+    // 如果是管理员编辑自己，只显示当前角色（不允许修改）
+    if (adminForm._id === userInfo.value.id && userInfo.value.role === 'admin') {
+      roles.push({ label: '管理员', value: 'admin' })
+      return roles
+    }
+    
+    // 超级管理员选项：只有在编辑现有超级管理员时才显示
+    if (adminForm._id && adminForm.role === 'super_admin') {
+      roles.push({ label: '超级管理员', value: 'super_admin' })
+    }
+    
+    // 管理员选项：超级管理员总是可选择，管理员只能编辑现有管理员
+    if (userInfo.value.role === 'super_admin' || (adminForm._id && adminForm.role === 'admin')) {
+      roles.push({ label: '管理员', value: 'admin' })
+    }
+    
+    // 操作员选项：所有人都可以选择
+    roles.push({ label: '操作员', value: 'operator' })
+    
+    return roles
+  })
   
   // 方法
   const getAdminList = async () => {
@@ -319,7 +398,6 @@
   }
   
   const handleAdd = () => {
-    console.log('🆕 开始新增管理员...')
     resetForm()
     dialogVisible.value = true
   }
@@ -404,6 +482,54 @@
     }
   }
   
+  // 重置密码
+  const handleResetPassword = async (row) => {
+    // 确认对话框
+    try {
+      await ElMessageBox.confirm(
+        `确定要重置 "${row.realName || row.username}" 的密码吗？密码将被重置为 "admin123"。`,
+        '重置密码确认',
+        {
+          confirmButtonText: '确定重置',
+          cancelButtonText: '取消',
+          type: 'warning',
+          beforeClose: (action, instance, done) => {
+            if (action === 'confirm') {
+              instance.confirmButtonLoading = true
+              instance.confirmButtonText = '重置中...'
+              
+              // 调用重置密码API
+              request.put(`/admin/administrators/${row._id || row.id}/password`, {
+                newPassword: 'admin123'
+              }).then(response => {
+                if (response.success) {
+                  ElMessage.success('密码重置成功')
+                  done()
+                } else {
+                  ElMessage.error(response.message || '密码重置失败')
+                  instance.confirmButtonLoading = false
+                  instance.confirmButtonText = '确定重置'
+                }
+              }).catch(error => {
+                console.error('重置密码失败:', error)
+                ElMessage.error(error.response?.data?.message || '密码重置失败')
+                instance.confirmButtonLoading = false
+                instance.confirmButtonText = '确定重置'
+              })
+            } else {
+              done()
+            }
+          }
+        }
+      )
+    } catch (error) {
+      // 用户取消操作，不显示错误
+      if (error !== 'cancel') {
+        console.error('重置密码操作失败:', error)
+      }
+    }
+  }
+  
   const handleSubmit = async () => {
     try {
       await adminFormRef.value.validate()
@@ -453,6 +579,7 @@
       realName: '',
       email: '',
       phone: '',
+      // 根据当前用户角色设置默认选择：管理员只能创建操作员，超级管理员默认选择操作员
       role: 'operator',
       password: '',
       confirmPassword: '',
@@ -493,6 +620,11 @@
   const formatDate = (date) => {
     if (!date) return '从未登录'
     return new Date(date).toLocaleString('zh-CN')
+  }
+
+  const getCreatorName = (createdBy) => {
+    if (!createdBy) return '未知'
+    return createdBy.username || createdBy.realName || '未知'
   }
   
   // 监听搜索关键词变化，实现输入即查询
@@ -603,6 +735,16 @@
     color: #909399;
   }
   
+  .creator-text {
+    font-size: 13px;
+    color: #606266;
+  }
+  
+  .creator-text.system {
+    color: #909399;
+    font-style: italic;
+  }
+  
   /* 分页样式 */
   .pagination-container {
     display: flex;
@@ -621,10 +763,26 @@
     margin-top: 4px;
   }
   
+  /* 修复备注输入框焦点时边框显示问题 */
+  :deep(.el-textarea__inner:focus) {
+    border-color: var(--el-color-primary) !important;
+    box-shadow: 0 0 0 1px var(--el-color-primary-light-7) inset !important;
+  }
+  
+  :deep(.el-textarea__inner:hover) {
+    border-color: var(--el-color-primary) !important;
+  }
+  
   /* 响应式设计 */
   @media (max-width: 768px) {
     .admin-list-container {
       padding: 8px;
+    }
+    
+    /* 在小屏幕上隐藏创建者列 */
+    .el-table :deep(.el-table__header-wrapper) th:nth-child(4),
+    .el-table :deep(.el-table__body-wrapper) td:nth-child(4) {
+      display: none;
     }
     
     .search-bar {
