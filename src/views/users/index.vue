@@ -658,31 +658,14 @@ const visibleColumns = ref([
 
 // 处理用户头像URL
 const getUserAvatarUrl = (avatar) => {
-  if (!avatar) return ''
-  
-  // 如果是完整的HTTP/HTTPS URL，直接返回
-  if (avatar.startsWith('http://') || avatar.startsWith('https://')) {
-    return avatar
+  try {
+    const { fixImageUrl } = require('../../config/index');
+    return fixImageUrl(avatar);
+  } catch (error) {
+    console.error('处理用户头像URL失败:', error.message);
+    ElMessage.warning('API配置失效：无法处理头像URL，请检查数据源配置');
+    return avatar || '';
   }
-  
-  // 获取后端服务器地址（去掉/api部分）
-  let baseUrl = import.meta.env.VITE_API_BASE_URL
-  
-  // 如果环境变量获取失败，使用默认值
-  if (!baseUrl) {
-    baseUrl = 'http://localhost:5001/api'
-  }
-  
-  // 去掉末尾的/api
-  baseUrl = baseUrl.replace('/api', '')
-  
-  // 如果是以/开头的绝对路径，直接拼接
-  if (avatar.startsWith('/')) {
-    return `${baseUrl}${avatar}`
-  }
-  
-  // 如果是相对路径，在前面加上/
-  return `${baseUrl}/${avatar}`
 }
 
 // 获取用户列表

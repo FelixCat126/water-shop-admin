@@ -8,6 +8,18 @@ const request = axios.create({
   timeout: 15000,
 })
 
+// 动态更新配置（如果localStorage中有配置的话）
+try {
+  const { getConfig, CONFIG_KEYS } = require('../config/index')
+  const timeout = getConfig(CONFIG_KEYS.API_TIMEOUT)
+  if (timeout && timeout !== 15000) {
+    request.defaults.timeout = timeout
+  }
+} catch (error) {
+  // 配置获取失败，使用默认配置
+  console.log('使用默认请求配置')
+}
+
 // 请求拦截器
 request.interceptors.request.use(
   config => {

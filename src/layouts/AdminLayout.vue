@@ -50,7 +50,7 @@
             <el-menu-item index="/banners">轮播图管理</el-menu-item>
             <el-menu-item index="/contents">内容管理</el-menu-item>
             <el-menu-item v-if="userInfo.role === 'super_admin' || userInfo.role === 'admin'" index="/admins">管理员账号</el-menu-item>
-            <el-menu-item index="/settings">通用配置</el-menu-item>
+            <el-menu-item v-if="userInfo.role === 'super_admin'" index="/settings">通用配置</el-menu-item>
           </el-sub-menu>
         </el-menu>
         

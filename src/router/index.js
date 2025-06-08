@@ -109,10 +109,21 @@ router.beforeEach((to, from, next) => {
   
   if (to.meta.requiresAuth && !token) {
     next('/login')
-  } else if (to.name === 'Admins') {
+    return
+  }
+  
+  // 检查特定页面的权限
+  if (to.name === 'Admins') {
     // 检查管理员账号权限：只有超级管理员和管理员可以访问
     const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
     if (userInfo.role !== 'super_admin' && userInfo.role !== 'admin') {
+      next('/')
+      return
+    }
+  } else if (to.name === 'Settings') {
+    // 检查通用配置权限：只有超级管理员可以访问
+    const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}')
+    if (userInfo.role !== 'super_admin') {
       next('/')
       return
     }
@@ -120,10 +131,11 @@ router.beforeEach((to, from, next) => {
   
   // 设置页面标题
   if (to.meta.title) {
-        document.title = `SPRINKLE - ${to.meta.title}`
-} else {
-  document.title = 'SPRINKLE'
+    document.title = `SPRINKLE - ${to.meta.title}`
+  } else {
+    document.title = 'SPRINKLE'
   }
+  
   next()
 })
 

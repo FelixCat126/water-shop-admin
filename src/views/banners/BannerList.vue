@@ -416,8 +416,13 @@ const articleLoading = ref(false)
 
 // 上传配置
 const uploadUrl = computed(() => {
-  const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001/api';
-  return `${baseUrl}/upload/banner`;
+  try {
+    const { getUploadUrl } = require('../../config/index');
+    return getUploadUrl('/upload/banner');
+  } catch (error) {
+    ElMessage.error('API配置失效：无法获取上传地址，请检查数据源配置');
+    return '';
+  }
 })
 const uploadHeaders = computed(() => ({
   'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -425,11 +430,14 @@ const uploadHeaders = computed(() => ({
 
 // 修复图片URL
 const fixImageUrl = (url) => {
-  if (url && url.startsWith('/')) {
-    // 如果是相对路径，添加域名
-    return `http://localhost:5001${url}`;
+  try {
+    const { fixImageUrl: configFixImageUrl } = require('../../config/index');
+    return configFixImageUrl(url);
+  } catch (error) {
+    console.error('修复图片URL失败:', error.message);
+    ElMessage.warning('API配置失效：无法处理图片URL，请检查数据源配置');
+    return url || '';
   }
-  return url;
 }
 
 // 获取轮播图列表
